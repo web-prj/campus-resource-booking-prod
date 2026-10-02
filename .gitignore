@@ -1,0 +1,45 @@
+# Dependencies
+**/node_modules/
+
+# Framework and compiled output
+**/.next/
+**/dist/
+**/build/
+**/out/
+
+# Test and tooling output
+**/coverage/
+**/.nyc_output/
+**/.playwright-cli/
+**/*.tsbuildinfo
+**/next-env.d.ts
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Local environment and secrets
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.test
+**/*.pem
+**/*.key
+**/*.p12
+
+# Editors and operating systems
+**/.DS_Store
+**/.idea/
+**/.vscode/
+**/.project
+**/.classpath
+**/.c9/
+**/*.launch
+**/.settings/
+**/*.sublime-workspace
+
+# Temporary files
+**/.temp/
+**/.tmp/
