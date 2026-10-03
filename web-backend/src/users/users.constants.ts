@@ -1,5 +1,8 @@
 /**
- * Transaction-scoped advisory lock serializing every change that can alter the
- * set of active administrators (last-admin guard, first-admin bootstrap).
+ * The single seeded student the app runs as now that authentication is removed.
+ * This exact row is inserted by the RemoveAuthAndSeedData migration, and every
+ * booking is attributed to it.
  */
-export const ACTIVE_ADMIN_ADVISORY_LOCK = 2_045_173_001;
+export const DEFAULT_STUDENT_ID = '00000000-0000-4000-8000-000000000001';
+export const DEFAULT_STUDENT_EMAIL = 'student@usth.edu.vn';
+export const DEFAULT_STUDENT_NAME = 'Student';

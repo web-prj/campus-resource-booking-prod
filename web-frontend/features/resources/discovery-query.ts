@@ -1,19 +1,10 @@
-import type {
-  ResourceDiscoveryFilters,
-  ResourceSort,
-  ResourceType,
-} from "./types";
+import type { ResourceDiscoveryFilters, ResourceSort } from "./types";
 
 export type DiscoverySearchParams = Record<
   string,
   string | string[] | undefined
 >;
 
-const RESOURCE_TYPES: ReadonlySet<ResourceType> = new Set([
-  "room",
-  "laboratory",
-  "equipment",
-]);
 const RESOURCE_SORTS: ReadonlySet<ResourceSort> = new Set([
   "name_asc",
   "capacity_asc",
@@ -66,7 +57,6 @@ export function normalizeDiscoveryFilters(
   const filters: ResourceDiscoveryFilters = {};
   const q = boundedText(params.q, 120);
   const buildingId = one(params.buildingId);
-  const type = one(params.type);
   const amenity = boundedText(params.amenity, 50)?.toLowerCase();
   const sort = one(params.sort);
   const minCapacity = boundedInteger(params.minCapacity, 1, 10000);
@@ -78,9 +68,6 @@ export function normalizeDiscoveryFilters(
   if (q) filters.q = q;
   if (buildingId && UUID_PATTERN.test(buildingId)) {
     filters.buildingId = buildingId;
-  }
-  if (type && RESOURCE_TYPES.has(type as ResourceType)) {
-    filters.type = type as ResourceType;
   }
   if (minCapacity !== undefined) filters.minCapacity = minCapacity;
   if (amenity) filters.amenity = amenity;
@@ -116,7 +103,6 @@ export function discoverySearchParams(
 
   if (merged.q) params.set("q", merged.q);
   if (merged.buildingId) params.set("buildingId", merged.buildingId);
-  if (merged.type) params.set("type", merged.type);
   if (merged.minCapacity !== undefined) {
     params.set("minCapacity", String(merged.minCapacity));
   }

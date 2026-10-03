@@ -29,7 +29,6 @@ export async function browserRequest(
   try {
     response = await request(getApiEndpoint(path), {
       ...init,
-      credentials: "include",
       headers,
     });
   } catch {

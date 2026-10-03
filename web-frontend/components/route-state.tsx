@@ -22,7 +22,7 @@ export function RouteState({
     <main className="route-state" aria-busy={busy || undefined}>
       <header className="route-state__header">
         <BrandMark />
-        <Link href="/dashboard">Return to workspace</Link>
+        <Link href="/">Return to room search</Link>
       </header>
       <section
         className="route-state__panel"

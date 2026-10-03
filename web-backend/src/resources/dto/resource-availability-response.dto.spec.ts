@@ -15,7 +15,6 @@ const resource = {
   operatingDays: [1, 2, 3, 4, 5, 6],
   opensAt: '08:00:00',
   closesAt: '18:00:00',
-  requiresApproval: false,
 } as Resource;
 
 function availability(
@@ -48,7 +47,6 @@ describe('ResourceAvailabilityResponseDto', () => {
       closesAt: '18:00',
       blockedReason: null,
       closureReason: null,
-      requiresApproval: false,
     });
     expect(response.slots).toHaveLength(10);
     expect(response.slots[0]).toEqual({
@@ -86,7 +84,7 @@ describe('ResourceAvailabilityResponseDto', () => {
     expect(response.slots).toEqual([]);
   });
 
-  it('removes hourly slots occupied by pending or confirmed bookings', () => {
+  it('removes hourly slots occupied by confirmed or checked-in bookings', () => {
     const response = availability(resource, '2026-09-15', null, [
       { startTime: '09:00:00', endTime: '11:00:00' } as Booking,
       { startTime: '14:00:00', endTime: '15:00:00' } as Booking,

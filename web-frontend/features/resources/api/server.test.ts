@@ -1,13 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-vi.mock("next/headers", () => ({
-  cookies: vi.fn(async () => ({ toString: (): string => "access_token=test" })),
-}));
 
-import { SessionExpiredError } from "@/lib/api/session";
 import {
-  getAdminResourceCatalog,
   getResourceAvailability,
   getResourceDetail,
   getResourceDirectory,
@@ -154,57 +149,28 @@ describe("resource server API", () => {
     );
   });
 
-  it("loads a paginated admin catalog page with its buildings", async () => {
-    const page = {
-      items: [resource],
-      total: 21,
-      page: 2,
-      pageSize: 20,
-      totalPages: 2,
-    };
-    const request = vi.fn<typeof fetch>(async (input) =>
-      String(input).includes("/buildings")
-        ? response([building])
-        : response(page),
-    );
-
-    await expect(getAdminResourceCatalog(2, request)).resolves.toEqual({
-      page,
-      buildings: [building],
-    });
-    expect(request).toHaveBeenCalledWith(
-      "http://backend:18320/api/admin/resources?page=2&pageSize=20",
-      expect.objectContaining({ cache: "no-store" }),
-    );
-  });
-
-  it("rejects a bare admin resource array and mismatched catalog pages", async () => {
-    const bare = vi.fn<typeof fetch>(async (input) =>
-      String(input).includes("/buildings")
-        ? response([building])
-        : response([resource]),
-    );
-    await expect(getAdminResourceCatalog(1, bare)).rejects.toThrow(
-      "invalid catalog data",
-    );
-
-    const mismatched = vi.fn<typeof fetch>(async (input) =>
-      String(input).includes("/buildings")
-        ? response([building])
-        : response({ items: [resource], total: 1, page: 1, pageSize: 20, totalPages: 1 }),
-    );
-    await expect(getAdminResourceCatalog(2, mismatched)).rejects.toThrow(
-      "invalid catalog data",
-    );
-  });
-
-  it("signals an expired session instead of a generic lookup failure", async () => {
+  it("surfaces a non-404 error status as a generic lookup failure", async () => {
     const request = vi.fn<typeof fetch>().mockResolvedValue(response({}, 401));
-    await expect(getResourceDetail(resourceId, request)).rejects.toBeInstanceOf(
-      SessionExpiredError,
+    await expect(getResourceDetail(resourceId, request)).rejects.toThrow(
+      "Resource lookup failed with 401.",
     );
-    await expect(getAdminResourceCatalog(1, request)).rejects.toBeInstanceOf(
-      SessionExpiredError,
+
+    const serverError = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(response({}, 500));
+    await expect(getResourceDetail(resourceId, serverError)).rejects.toThrow(
+      "Resource lookup failed with 500.",
     );
+  });
+
+  it("does not forward a cookie header on resource requests", async () => {
+    const request = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(response(availability));
+
+    await getResourceAvailability(resourceId, requestedDate, request);
+
+    const init = request.mock.calls[0][1];
+    expect(init?.headers).toBeUndefined();
   });
 });

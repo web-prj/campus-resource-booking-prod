@@ -1,10 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { cookies } from "next/headers";
 import { getStudentBooking, getStudentBookings } from "./server";
-import { SessionExpiredError } from "@/lib/api/session";
 
 vi.mock("server-only", () => ({}));
-vi.mock("next/headers", () => ({ cookies: vi.fn() }));
 
 const booking = {
   id: "40000000-0000-4000-8000-000000000001",
@@ -14,18 +11,8 @@ const booking = {
   timeZone: "Asia/Ho_Chi_Minh",
   status: "confirmed",
   canCancel: false,
-  canRequestCheckIn: false,
   hasEnded: true,
-  checkInCode: null,
-  checkInRequestedAt: null,
-  checkedInAt: null,
-  checkedOutAt: null,
-  noShowAt: null,
-  checkInDeadline: "2099-01-05T02:15:00.000Z",
-  releasedAutomatically: false,
   cancelledAt: null,
-  reviewedAt: null,
-  rejectionReason: null,
   createdAt: "2026-09-15T00:00:00.000Z",
   resource: {
     id: "20000000-0000-4000-8000-000000000001",
@@ -47,9 +34,6 @@ function response(body: unknown, status = 200): Response {
 
 describe("student booking server API", () => {
   beforeEach(() => {
-    vi.mocked(cookies).mockResolvedValue({
-      toString: () => "access_token=session",
-    } as never);
     vi.stubEnv("INTERNAL_API_URL", "http://backend:18320/api");
   });
 
@@ -61,7 +45,6 @@ describe("student booking server API", () => {
     expect(request).toHaveBeenCalledWith(
       "http://backend:18320/api/bookings/mine",
       {
-        headers: { Cookie: "access_token=session" },
         cache: "no-store",
       },
     );
@@ -100,8 +83,10 @@ describe("student booking server API", () => {
     ).rejects.toThrow("invalid booking data");
   });
 
-  it("signals an expired session instead of a generic failure", async () => {
+  it("surfaces a non-404 failure as a generic error", async () => {
     const request = vi.fn<typeof fetch>().mockResolvedValue(response({}, 401));
-    await expect(getStudentBookings(request)).rejects.toBeInstanceOf(SessionExpiredError);
+    await expect(getStudentBookings(request)).rejects.toThrow(
+      "Booking lookup failed with 401.",
+    );
   });
 });

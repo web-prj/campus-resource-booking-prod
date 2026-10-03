@@ -13,11 +13,7 @@ import type {
   ResourceType,
 } from "./types";
 
-const RESOURCE_TYPES: ReadonlySet<ResourceType> = new Set([
-  "room",
-  "laboratory",
-  "equipment",
-]);
+const RESOURCE_TYPES: ReadonlySet<ResourceType> = new Set(["room"]);
 const RESOURCE_STATUSES: ReadonlySet<ResourceStatus> = new Set([
   "active",
   "maintenance",

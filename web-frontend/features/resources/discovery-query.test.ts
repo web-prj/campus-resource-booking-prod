@@ -11,9 +11,8 @@ describe("resource discovery query", () => {
   it("normalizes supported filters and ignores hostile or repeated values", () => {
     expect(
       normalizeDiscoveryFilters({
-        q: "  projector  ",
+        q: "  study room  ",
         buildingId: BUILDING_ID,
-        type: "equipment",
         minCapacity: "4",
         amenity: "  HDMI-Cable ",
         sort: "capacity_desc",
@@ -24,9 +23,8 @@ describe("resource discovery query", () => {
         unknown: "value",
       }),
     ).toEqual({
-      q: "projector",
+      q: "study room",
       buildingId: BUILDING_ID,
-      type: "equipment",
       minCapacity: 4,
       amenity: "hdmi-cable",
       sort: "capacity_desc",
@@ -40,7 +38,6 @@ describe("resource discovery query", () => {
       normalizeDiscoveryFilters({
         q: ["one", "two"],
         buildingId: "not-a-uuid",
-        type: "vehicle",
         minCapacity: "0",
         amenity: "x".repeat(51),
         sort: "newest",
@@ -57,14 +54,11 @@ describe("resource discovery query", () => {
       date: "2099-01-05",
       startTime: "",
       endTime: "",
-      type: "room",
     });
-    expect(filters).toEqual({ date: "2099-01-05", type: "room" });
-    expect(discoverySearchParams(filters).toString()).toBe(
-      "type=room&date=2099-01-05",
-    );
+    expect(filters).toEqual({ date: "2099-01-05" });
+    expect(discoverySearchParams(filters).toString()).toBe("date=2099-01-05");
     expect(discoveryHref(filters, { page: 2 })).toBe(
-      "/resources?type=room&date=2099-01-05&page=2",
+      "/resources?date=2099-01-05&page=2",
     );
     expect(normalizeDiscoveryFilters({ date: "2099-01-05", startTime: "09:00" })).toEqual({});
   });
@@ -73,7 +67,6 @@ describe("resource discovery query", () => {
     const filters = {
       q: "study room",
       buildingId: BUILDING_ID,
-      type: "room" as const,
       minCapacity: 8,
       amenity: "whiteboard",
       sort: "capacity_asc" as const,
@@ -84,10 +77,10 @@ describe("resource discovery query", () => {
     };
 
     expect(discoverySearchParams(filters).toString()).toBe(
-      `q=study+room&buildingId=${BUILDING_ID}&type=room&minCapacity=8&amenity=whiteboard&date=2026-09-15&startTime=09%3A00&endTime=11%3A00&sort=capacity_asc&page=3`,
+      `q=study+room&buildingId=${BUILDING_ID}&minCapacity=8&amenity=whiteboard&date=2026-09-15&startTime=09%3A00&endTime=11%3A00&sort=capacity_asc&page=3`,
     );
     expect(discoveryHref(filters, { page: 2 })).toBe(
-      `/resources?q=study+room&buildingId=${BUILDING_ID}&type=room&minCapacity=8&amenity=whiteboard&date=2026-09-15&startTime=09%3A00&endTime=11%3A00&sort=capacity_asc&page=2`,
+      `/resources?q=study+room&buildingId=${BUILDING_ID}&minCapacity=8&amenity=whiteboard&date=2026-09-15&startTime=09%3A00&endTime=11%3A00&sort=capacity_asc&page=2`,
     );
   });
 

@@ -70,7 +70,6 @@ function mapError(error: unknown): BookingRequestError {
 
 export async function createBookingRequest(
   input: BookingRequestInput,
-  requesterId: string,
   request: typeof fetch = fetch,
 ): Promise<BookingRequestResult> {
   try {
@@ -81,7 +80,6 @@ export async function createBookingRequest(
         request,
       ),
       input,
-      requesterId,
     );
     if (!result) {
       throw new BookingRequestError(

@@ -1,4 +1,4 @@
-export type ResourceType = "room" | "laboratory" | "equipment";
+export type ResourceType = "room";
 export type ResourceStatus = "active" | "maintenance" | "inactive";
 export type ResourceSort = "name_asc" | "capacity_asc" | "capacity_desc";
 export type AvailabilityBlockedReason =
@@ -88,7 +88,6 @@ export interface ResourceBookingConflict {
 export interface ResourceDiscoveryFilters {
   q?: string;
   buildingId?: string;
-  type?: ResourceType;
   minCapacity?: number;
   amenity?: string;
   date?: string;

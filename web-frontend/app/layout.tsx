@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     template: "%s | Campus Resource Booking",
   },
   description:
-    "Find and reserve USTH rooms, laboratories, and equipment without schedule conflicts.",
+    "Find and reserve USTH campus rooms without schedule conflicts.",
 };
 
 export default function RootLayout({

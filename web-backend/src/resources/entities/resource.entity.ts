@@ -72,9 +72,6 @@ export class Resource {
   @Column({ type: 'text', array: true, default: () => "'{}'" })
   amenities: string[];
 
-  @Column({ name: 'requires_approval', type: 'boolean', default: false })
-  requiresApproval: boolean;
-
   @Column({
     name: 'operating_days',
     type: 'smallint',

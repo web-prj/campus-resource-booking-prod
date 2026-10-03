@@ -32,9 +32,6 @@ export class ResourceResponseDto {
   @ApiProperty({ type: [String] })
   amenities: string[];
 
-  @ApiProperty()
-  requiresApproval: boolean;
-
   @ApiProperty({
     type: [Number],
     example: [1, 2, 3, 4, 5, 6],
@@ -68,7 +65,6 @@ export class ResourceResponseDto {
       capacity: resource.capacity,
       location: resource.location,
       amenities: resource.amenities,
-      requiresApproval: resource.requiresApproval,
       operatingDays: resource.operatingDays,
       opensAt: resource.opensAt.slice(0, 5),
       closesAt: resource.closesAt.slice(0, 5),

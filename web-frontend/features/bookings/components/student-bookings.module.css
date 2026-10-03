@@ -47,10 +47,7 @@
 .nextStatus[data-status="checked_in"], .status[data-status="checked_in"] { color: #173a87; background: #dfe7ff; }
 .status[data-status="completed"] { color: #0d6b4c; background: #dff8ee; }
 .status[data-status="no_show"] { color: #7b3032; background: #f9dddd; }
-.nextStatus[data-status="pending"], .status[data-status="pending"] { color: #775500; background: #fff1bd; }
-.status[data-status="rejected"] { color: #8c1d21; background: #ffe2e3; }
 .status[data-status="cancelled"] { color: #7b3032; background: #f9dddd; }
-.nextStatus[data-status="expired"], .status[data-status="expired"] { color: #4d5575; background: #e7e9f2; }
 .nextMarker { position: relative; z-index: 1; width: 155px; height: 175px; display: grid; flex: 0 0 auto; place-content: center; text-align: center; border: 1px solid rgba(255,255,255,.22); border-radius: 24px; background: rgba(255,255,255,.11); backdrop-filter: blur(15px); }
 .nextMarker span { font-family: var(--font-display); font-size: 4rem; line-height: .9; }
 .nextMarker small { margin-top: 8px; color: rgba(255,255,255,.68); font-weight: 800; }
@@ -66,18 +63,16 @@
 .sectionHeading > span { min-width: 32px; min-height: 32px; display: grid; place-items: center; color: var(--usth-blue); border-radius: 10px; background: rgba(42,60,149,.07); font-weight: 800; }
 .bookingList { display: grid; gap: 10px; margin-top: 14px; }
 .bookingRow { display: grid; grid-template-columns: 58px 44px minmax(0,1fr) auto; align-items: center; gap: 15px; padding: 16px; border: 1px solid rgba(42,60,149,.11); border-radius: 16px; background: white; box-shadow: 0 8px 25px rgba(23,40,123,.045); }
-.bookingRow[data-status="cancelled"], .bookingRow[data-status="rejected"] { opacity: .78; }
+.bookingRow[data-status="cancelled"], .bookingRow[data-status="no_show"] { opacity: .78; }
 .dateBlock { width: 58px; height: 58px; display: grid; place-content: center; text-align: center; color: var(--usth-blue); border-radius: 13px; background: rgba(42,60,149,.065); }
 .dateBlock strong { font-family: var(--font-display); font-size: 1.25rem; line-height: 1; }
 .dateBlock span { margin-top: 3px; font-size: .64rem; font-weight: 800; }
 .resourceIcon { width: 44px; height: 44px; display: grid; place-items: center; color: var(--usth-blue); border: 1px solid rgba(42,60,149,.1); border-radius: 12px; }
-.resourceIcon[data-type="laboratory"] { color: var(--usth-red); }
 .resourceIcon svg { width: 21px; height: 21px; }
 .bookingIdentity { min-width: 0; }
 .bookingIdentity h3 { margin: 5px 0 0; font-size: .96rem; }
 .bookingIdentity p { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 5px 0 0; color: var(--muted); font-size: .75rem; }
 .bookingIdentity p svg { width: 14px; height: 14px; color: var(--usth-blue); }
-.bookingIdentity p.expiredNote { color: #4d5575; font-weight: 650; }
 .detailLink { min-height: 42px; display: inline-flex; align-items: center; gap: 6px; color: var(--usth-blue); font-size: .76rem; font-weight: 790; }
 .emptyState { display: grid; grid-template-columns: 44px minmax(0,1fr) auto; align-items: center; gap: 14px; margin-top: 14px; padding: 22px; border: 1px dashed rgba(42,60,149,.2); border-radius: 16px; background: rgba(255,255,255,.55); }
 .emptyState > svg { width: 44px; height: 44px; padding: 11px; color: var(--usth-blue); border-radius: 12px; background: rgba(42,60,149,.07); }
@@ -107,15 +102,13 @@
 .actionPanel h2 { margin: 15px 0 0; font-family: var(--font-display); font-size: 1.35rem; }
 .actionPanel h2:focus { outline: 3px solid rgba(42,60,149,.2); outline-offset: 3px; }
 .actionPanel > p { margin: 9px 0 0; color: var(--muted); font-size: .8rem; line-height: 1.6; }
-.confirmation { display: grid; gap: 12px; margin-top: 20px; padding: 20px; color: var(--usth-blue-deep); border: 1px solid rgba(42,60,149,.22); border-radius: 14px; background: rgba(240,243,255,.85); }
-.confirmation h3 { margin: 0; font-family: var(--font-display); font-size: 1.2rem; }
-.confirmation p, .confirmation small { margin: 0; font-size: .78rem; line-height: 1.55; }
-.confirmation dl { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px 20px; margin: 0; }
-.confirmation dl div { padding-top: 9px; border-top: 1px solid rgba(42,60,149,.15); }
-.confirmation dt { font-size: .72rem; color: #43517f; }
-.confirmation dd { margin: 3px 0 0; font-size: .82rem; font-weight: 750; overflow-wrap: anywhere; }
-.confirmation small { color: #43517f; }
-.cancelButton { width: 100%; min-height: 44px; margin-top: 20px; color: var(--usth-red-dark); border: 1px solid rgba(236,34,39,.24); border-radius: 11px; background: rgba(236,34,39,.055); cursor: pointer; font-weight: 800; }
+.actionStatus { margin: 14px 0 0; padding: 12px 14px; color: #0d6b4c; border: 1px solid rgba(13,107,76,.26); border-radius: 11px; background: rgba(13,107,76,.07); font-size: .8rem; font-weight: 700; }
+.actionStatus:empty { display: none; }
+.checkInButton { width: 100%; min-height: 46px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 20px; color: white; border: 0; border-radius: 11px; background: var(--usth-blue); cursor: pointer; font: inherit; font-weight: 800; }
+.checkInButton svg { width: 18px; height: 18px; }
+.checkInButton:disabled { opacity: .7; cursor: progress; }
+.checkInButton:focus-visible { outline: 3px solid rgba(42,60,149,.3); outline-offset: 2px; }
+.cancelButton { width: 100%; min-height: 44px; margin-top: 14px; color: var(--usth-red-dark); border: 1px solid rgba(236,34,39,.24); border-radius: 11px; background: rgba(236,34,39,.055); cursor: pointer; font-weight: 800; }
 .confirmCancel { display: grid; gap: 5px; margin-top: 20px; padding: 15px; border: 1px solid rgba(236,34,39,.18); border-radius: 12px; background: rgba(236,34,39,.045); }
 .confirmCancel span { color: var(--muted); font-size: .74rem; }
 .confirmCancel div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }

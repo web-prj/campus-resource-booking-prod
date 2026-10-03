@@ -13,18 +13,13 @@ import {
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
-  ApiCookieAuth,
   ApiCreatedResponse,
-  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
-  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../users/enums/user-role.enum';
+import { DEFAULT_STUDENT_ID } from '../users/users.constants';
 import { BookingsService } from './bookings.service';
 import { BookingResponseDto } from './dto/booking-response.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -36,22 +31,18 @@ import { Booking } from './entities/booking.entity';
 import { BookingDomainError } from './errors/booking-domain.error';
 
 @ApiTags('bookings')
-@ApiCookieAuth()
-@ApiUnauthorizedResponse({ description: 'Authentication required' })
-@ApiForbiddenResponse({ description: 'Student role required' })
-@Roles(UserRole.STUDENT)
 @Controller('bookings')
 export class BookingsController {
+  private readonly requesterId = DEFAULT_STUDENT_ID;
+
   constructor(private readonly bookingsService: BookingsService) {}
 
   @Get('mine')
-  @ApiOperation({ summary: 'List the authenticated student booking timeline' })
+  @ApiOperation({ summary: 'List the student booking timeline' })
   @ApiOkResponse({ type: StudentBookingListResponseDto })
-  async findMine(
-    @CurrentUser('id') requesterId: string,
-  ): Promise<StudentBookingListResponseDto> {
+  async findMine(): Promise<StudentBookingListResponseDto> {
     const { upcoming, history, evaluatedAt } =
-      await this.bookingsService.findForStudent(requesterId);
+      await this.bookingsService.findForStudent(this.requesterId);
     return {
       upcoming: upcoming.map((booking) =>
         this.studentResponse(booking, evaluatedAt),
@@ -63,17 +54,14 @@ export class BookingsController {
   }
 
   @Get('mine/:id')
-  @ApiOperation({
-    summary: 'View one booking owned by the authenticated student',
-  })
+  @ApiOperation({ summary: 'View one booking owned by the student' })
   @ApiOkResponse({ type: StudentBookingResponseDto })
   @ApiNotFoundResponse({ description: 'Booking not found' })
   async findMineById(
-    @CurrentUser('id') requesterId: string,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<StudentBookingResponseDto> {
     const booking = await this.bookingsService.findOneForStudent(
-      requesterId,
+      this.requesterId,
       id,
     );
     if (!booking) throw new NotFoundException('Booking not found');
@@ -86,12 +74,11 @@ export class BookingsController {
   @ApiNotFoundResponse({ description: 'Booking not found' })
   @ApiConflictResponse({ description: 'Booking can no longer be cancelled' })
   async cancelMine(
-    @CurrentUser('id') requesterId: string,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<StudentBookingResponseDto> {
     try {
       return this.studentResponse(
-        await this.bookingsService.cancel(requesterId, id),
+        await this.bookingsService.cancel(this.requesterId, id),
       );
     } catch (error: unknown) {
       if (error instanceof BookingDomainError) {
@@ -113,18 +100,15 @@ export class BookingsController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Create a booking request' })
+  @ApiOperation({ summary: 'Create a booking' })
   @ApiCreatedResponse({ type: BookingResponseDto })
   @ApiBadRequestResponse({ description: 'Invalid or past booking interval' })
   @ApiNotFoundResponse({ description: 'Resource not found' })
   @ApiConflictResponse({ description: 'Resource unavailable or overlapping' })
-  async create(
-    @CurrentUser('id') requesterId: string,
-    @Body() dto: CreateBookingDto,
-  ): Promise<BookingResponseDto> {
+  async create(@Body() dto: CreateBookingDto): Promise<BookingResponseDto> {
     try {
       return BookingResponseDto.fromEntity(
-        await this.bookingsService.create(requesterId, dto),
+        await this.bookingsService.create(this.requesterId, dto),
       );
     } catch (error: unknown) {
       if (error instanceof BookingDomainError) {
@@ -159,7 +143,6 @@ export class BookingsController {
       booking,
       this.bookingsService.canCancel(booking, evaluatedAt),
       this.bookingsService.hasEnded(booking, evaluatedAt),
-      this.bookingsService.checkInDeadline(booking),
     );
   }
 }

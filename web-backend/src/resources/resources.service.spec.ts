@@ -1,6 +1,5 @@
-import { QueryFailedError, Repository, SelectQueryBuilder } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Booking } from '../bookings/entities/booking.entity';
-import { BookingStatus } from '../bookings/enums/booking-status.enum';
 import { Building } from './entities/building.entity';
 import { ResourceClosure } from './entities/resource-closure.entity';
 import { Resource } from './entities/resource.entity';
@@ -9,14 +8,7 @@ import {
   ResourceSort,
 } from './dto/discover-resources-query.dto';
 import { ResourceStatus } from './enums/resource-status.enum';
-import { ResourceType } from './enums/resource-type.enum';
-import { ResourceCodeAlreadyExistsError } from './errors/resource-code-already-exists.error';
-import { ResourceHasActiveBookingsError } from './errors/resource-has-active-bookings.error';
-import {
-  BuildingNotFoundError,
-  InvalidOperatingHoursError,
-  ResourcesService,
-} from './resources.service';
+import { ResourcesService } from './resources.service';
 
 const building = { id: '10000000-0000-4000-8000-000000000001' } as Building;
 const resource = {
@@ -33,15 +25,7 @@ const resource = {
 
 describe('ResourcesService', () => {
   let resourcesRepository: jest.Mocked<
-    Pick<
-      Repository<Resource>,
-      | 'create'
-      | 'createQueryBuilder'
-      | 'save'
-      | 'findOne'
-      | 'findAndCount'
-      | 'update'
-    >
+    Pick<Repository<Resource>, 'createQueryBuilder' | 'findOne'>
   > & {
     manager: {
       transaction: jest.Mock;
@@ -59,32 +43,12 @@ describe('ResourcesService', () => {
       | 'skip'
       | 'take'
       | 'getManyAndCount'
-      | 'setLock'
-      | 'getOne'
     >
   >;
-  let buildingsRepository: jest.Mocked<Pick<Repository<Building>, 'existsBy'>>;
-  let closuresRepository: {
-    create: jest.Mock;
-    delete: jest.Mock;
-    find: jest.Mock;
-    findOneBy: jest.Mock;
-    save: jest.Mock;
-  };
-  let bookingsRepository: { find: jest.Mock; createQueryBuilder: jest.Mock };
-  let bookingQuery: {
-    where: jest.Mock;
-    andWhere: jest.Mock;
-    orderBy: jest.Mock;
-    addOrderBy: jest.Mock;
-    take: jest.Mock;
-    getManyAndCount: jest.Mock;
-  };
+  let buildingsRepository: jest.Mocked<Pick<Repository<Building>, 'find'>>;
+  let closuresRepository: { findOneBy: jest.Mock };
+  let bookingsRepository: { find: jest.Mock };
   let service: ResourcesService;
-  let availabilityEvents: {
-    notifyAvailabilityChanged: jest.Mock;
-    notifyResourceChanged: jest.Mock;
-  };
 
   beforeEach(() => {
     queryBuilder = {
@@ -96,8 +60,6 @@ describe('ResourcesService', () => {
       skip: jest.fn(),
       take: jest.fn(),
       getManyAndCount: jest.fn().mockResolvedValue([[resource], 1]),
-      setLock: jest.fn(),
-      getOne: jest.fn().mockResolvedValue(resource),
     };
     for (const method of [
       'innerJoinAndSelect',
@@ -107,26 +69,22 @@ describe('ResourcesService', () => {
       'addOrderBy',
       'skip',
       'take',
-      'setLock',
     ] as const) {
       queryBuilder[method].mockReturnValue(
         queryBuilder as unknown as SelectQueryBuilder<Resource>,
       );
     }
 
+    closuresRepository = { findOneBy: jest.fn().mockResolvedValue(null) };
+    bookingsRepository = { find: jest.fn().mockResolvedValue([]) };
+
     resourcesRepository = {
-      create: jest.fn().mockReturnValue(resource),
       createQueryBuilder: jest
         .fn()
         .mockReturnValue(
           queryBuilder as unknown as SelectQueryBuilder<Resource>,
         ),
-      save: jest.fn().mockResolvedValue(resource),
       findOne: jest.fn().mockResolvedValue(resource),
-      findAndCount: jest.fn().mockResolvedValue([[resource], 1]),
-      update: jest
-        .fn()
-        .mockResolvedValue({ affected: 1, raw: [], generatedMaps: [] }),
       manager: {
         transaction: jest.fn(),
         getRepository: jest.fn(),
@@ -155,48 +113,12 @@ describe('ResourcesService', () => {
         return operation?.(resourcesRepository.manager);
       },
     );
-    buildingsRepository = {
-      existsBy: jest.fn().mockResolvedValue(true),
-    };
-    closuresRepository = {
-      create: jest.fn((value: ResourceClosure) => value),
-      delete: jest.fn().mockResolvedValue({ affected: 1, raw: [] }),
-      find: jest.fn().mockResolvedValue([]),
-      findOneBy: jest.fn().mockResolvedValue(null),
-      save: jest.fn(async (value: ResourceClosure) => value),
-    };
-    bookingQuery = {
-      where: jest.fn(),
-      andWhere: jest.fn(),
-      orderBy: jest.fn(),
-      addOrderBy: jest.fn(),
-      take: jest.fn(),
-      getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
-    };
-    for (const method of [
-      'where',
-      'andWhere',
-      'orderBy',
-      'addOrderBy',
-      'take',
-    ] as const) {
-      bookingQuery[method].mockReturnValue(bookingQuery);
-    }
-    bookingsRepository = {
-      find: jest.fn().mockResolvedValue([]),
-      createQueryBuilder: jest.fn().mockReturnValue(bookingQuery),
-    };
-    availabilityEvents = {
-      notifyAvailabilityChanged: jest.fn(),
-      notifyResourceChanged: jest.fn(),
-    };
+    buildingsRepository = { find: jest.fn().mockResolvedValue([]) };
+
     service = new ResourcesService(
       resourcesRepository as unknown as Repository<Resource>,
       buildingsRepository as unknown as Repository<Building>,
-      closuresRepository as unknown as Repository<ResourceClosure>,
-      bookingsRepository as unknown as Repository<Booking>,
       () => new Date('2026-09-14T00:00:00.000Z'),
-      availabilityEvents as never,
     );
   });
 
@@ -204,7 +126,6 @@ describe('ResourcesService', () => {
     const query: DiscoverResourcesQueryDto = {
       q: 'Room_100%',
       buildingId: building.id,
-      type: ResourceType.ROOM,
       minCapacity: 6,
       amenity: 'whiteboard',
       sort: ResourceSort.CAPACITY_DESC,
@@ -231,10 +152,6 @@ describe('ResourcesService', () => {
       { buildingId: building.id },
     );
     expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-      'resource.type = :type',
-      { type: ResourceType.ROOM },
-    );
-    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
       'resource.capacity >= :minCapacity',
       { minCapacity: 6 },
     );
@@ -255,17 +172,10 @@ describe('ResourcesService', () => {
   });
 
   it('returns no resources for an elapsed campus interval', async () => {
-    const availabilityEvents = {
-      notifyAvailabilityChanged: jest.fn(),
-      notifyResourceChanged: jest.fn(),
-    };
     const elapsedService = new ResourcesService(
       resourcesRepository as unknown as Repository<Resource>,
       buildingsRepository as unknown as Repository<Building>,
-      closuresRepository as unknown as Repository<ResourceClosure>,
-      bookingsRepository as unknown as Repository<Booking>,
       () => new Date('2026-09-15T03:00:00.000Z'),
-      availabilityEvents as never,
     );
 
     await expect(
@@ -285,13 +195,7 @@ describe('ResourcesService', () => {
     const todayService = new ResourcesService(
       resourcesRepository as unknown as Repository<Resource>,
       buildingsRepository as unknown as Repository<Building>,
-      closuresRepository as unknown as Repository<ResourceClosure>,
-      bookingsRepository as unknown as Repository<Booking>,
       () => new Date('2026-09-15T03:00:00.000Z'),
-      {
-        notifyAvailabilityChanged: jest.fn(),
-        notifyResourceChanged: jest.fn(),
-      } as never,
     );
     await todayService.discover({
       date: '2026-09-15',
@@ -326,7 +230,7 @@ describe('ResourcesService', () => {
     );
   });
 
-  it('filters date-only discovery by operating day, closures and any booking', async () => {
+  it('filters date-only discovery by operating day, closures and blocking bookings', async () => {
     await service.discover({
       date: '2026-09-15',
       sort: ResourceSort.NAME_ASC,
@@ -347,9 +251,7 @@ describe('ResourcesService', () => {
     );
     expect(queryBuilder.andWhere).toHaveBeenCalledWith(
       expect.stringContaining('FROM bookings booking'),
-      {
-        blockingStatuses: ['pending', 'confirmed', 'checked_in'],
-      },
+      { blockingStatuses: ['confirmed'] },
     );
   });
 
@@ -382,7 +284,7 @@ describe('ResourcesService', () => {
     expect(queryBuilder.andWhere).toHaveBeenCalledWith(
       expect.stringContaining('FROM bookings booking'),
       expect.objectContaining({
-        blockingStatuses: ['pending', 'confirmed', 'checked_in'],
+        blockingStatuses: ['confirmed'],
       }),
     );
   });
@@ -433,9 +335,7 @@ describe('ResourcesService', () => {
     });
     expect(bookingsRepository.find).toHaveBeenCalledWith({
       where: [
-        { resourceId: resource.id, date: '2026-09-15', status: 'pending' },
         { resourceId: resource.id, date: '2026-09-15', status: 'confirmed' },
-        { resourceId: resource.id, date: '2026-09-15', status: 'checked_in' },
       ],
       order: { startTime: 'ASC' },
     });
@@ -460,357 +360,10 @@ describe('ResourcesService', () => {
     });
   });
 
-  it('rejects a resource assigned to an unknown building', async () => {
-    buildingsRepository.existsBy.mockResolvedValue(false);
-
-    await expect(
-      service.create({
-        code: 'ROOM-A103',
-        name: 'Study Room A103',
-        type: ResourceType.ROOM,
-        capacity: 8,
-        location: 'First floor',
-        buildingId: building.id,
-      }),
-    ).rejects.toBeInstanceOf(BuildingNotFoundError);
-
-    expect(resourcesRepository.save).not.toHaveBeenCalled();
-  });
-
-  it('translates the resource code unique constraint', async () => {
-    const duplicateError = Object.assign(new Error('duplicate key'), {
-      code: '23505',
-      constraint: 'IDX_resources_code',
-    });
-    resourcesRepository.save.mockRejectedValue(
-      new QueryFailedError('INSERT INTO resources', [], duplicateError),
-    );
-
-    await expect(
-      service.create({
-        code: 'ROOM-A101',
-        name: 'Duplicate room',
-        type: ResourceType.ROOM,
-        capacity: 8,
-        location: 'First floor',
-        buildingId: building.id,
-      }),
-    ).rejects.toBeInstanceOf(ResourceCodeAlreadyExistsError);
-  });
-
-  it('translates a building foreign-key race', async () => {
-    const foreignKeyError = Object.assign(new Error('foreign key violation'), {
-      code: '23503',
-      constraint: 'FK_resources_building_id',
-    });
-    resourcesRepository.update.mockRejectedValue(
-      new QueryFailedError('UPDATE resources', [], foreignKeyError),
-    );
-
-    await expect(
-      service.update(resource, { buildingId: building.id }),
-    ).rejects.toBeInstanceOf(BuildingNotFoundError);
-  });
-
-  it.each([
-    [{ opensAt: '18:00' }],
-    [{ opensAt: '19:00' }],
-    [{ closesAt: '08:00' }],
-    [{ closesAt: '07:00' }],
-  ])(
-    'rejects a one-sided operating-hour update outside persisted bounds',
-    async (changes) => {
-      await expect(service.update(resource, changes)).rejects.toBeInstanceOf(
-        InvalidOperatingHoursError,
-      );
-      expect(resourcesRepository.update).not.toHaveBeenCalled();
-    },
-  );
-
-  it('updates only detail and operating-hour fields present in the request', async () => {
-    await service.update(resource, {
-      name: 'Updated Room',
-      capacity: 12,
-      description: '',
-      operatingDays: [1, 2, 3, 4, 5],
-      opensAt: '09:00',
-      closesAt: '17:00',
-    });
-
-    expect(resourcesRepository.update).toHaveBeenCalledWith(resource.id, {
-      name: 'Updated Room',
-      capacity: 12,
-      description: null,
-      operatingDays: [1, 2, 3, 4, 5],
-      opensAt: '09:00',
-      closesAt: '17:00',
-    });
-  });
-
-  it('loads pending, confirmed, and checked-in bookings that block availability', async () => {
-    const bookings = [{ id: 'booking-1' }] as Booking[];
-    bookingsRepository.find.mockResolvedValue(bookings);
-
-    await expect(
-      service.findBlockingBookings(resource.id, '2026-09-18'),
-    ).resolves.toBe(bookings);
-    expect(bookingsRepository.find).toHaveBeenCalledWith({
-      where: [
-        { resourceId: resource.id, date: '2026-09-18', status: 'pending' },
-        { resourceId: resource.id, date: '2026-09-18', status: 'confirmed' },
-        { resourceId: resource.id, date: '2026-09-18', status: 'checked_in' },
-      ],
-      order: { startTime: 'ASC' },
-    });
-  });
-
-  it('creates, lists, and deletes a scoped closure', async () => {
-    const closure = {
-      id: '40000000-0000-4000-8000-000000000001',
-      resourceId: resource.id,
-      date: '2026-09-18',
-      reason: 'Campus maintenance',
-    } as ResourceClosure;
-    closuresRepository.create.mockReturnValue(closure);
-    closuresRepository.save.mockResolvedValue(closure);
-    closuresRepository.find.mockResolvedValue([closure]);
-
-    await expect(
-      service.createClosure(resource.id, {
-        date: closure.date,
-        reason: closure.reason,
-      }),
-    ).resolves.toBe(closure);
-    await expect(service.findClosures(resource.id)).resolves.toEqual([closure]);
-    await expect(service.deleteClosure(resource.id, closure.id)).resolves.toBe(
-      true,
-    );
-
-    expect(closuresRepository.delete).toHaveBeenCalledWith({
-      id: closure.id,
-      resourceId: resource.id,
-    });
-  });
-
-  it('notifies dashboards when a new resource is available', async () => {
-    const created = await service.create({
-      code: 'ROOM-A103',
-      name: 'Study Room A103',
-      type: ResourceType.ROOM,
-      capacity: 8,
-      location: 'First floor',
-      buildingId: building.id,
-    });
-    expect(availabilityEvents.notifyResourceChanged).toHaveBeenCalledWith(
-      created.id,
-    );
-  });
-
-  it('updates status without writing stale detail fields', async () => {
-    await service.updateStatus(resource, ResourceStatus.MAINTENANCE);
-
-    expect(resourcesRepository.update).toHaveBeenCalledWith(resource.id, {
-      status: ResourceStatus.MAINTENANCE,
-    });
-  });
-
-  it('does not hide unrelated persistence failures', async () => {
-    const driverError = Object.assign(new Error('not-null violation'), {
-      code: '23502',
-    });
-    const failure = new QueryFailedError(
-      'INSERT INTO resources',
-      [],
-      driverError,
-    );
-    resourcesRepository.save.mockRejectedValue(failure);
-
-    await expect(
-      service.create({
-        code: 'ROOM-A103',
-        name: 'Study Room A103',
-        type: ResourceType.ROOM,
-        capacity: 8,
-        location: 'First floor',
-        buildingId: building.id,
-      }),
-    ).rejects.toBe(failure);
-  });
-
-  it('lists one administration page ordered by name, code, and id', async () => {
-    await expect(service.findPage(3, 20)).resolves.toEqual([[resource], 1]);
-    expect(resourcesRepository.findAndCount).toHaveBeenCalledWith({
-      relations: { building: true },
-      order: { name: 'ASC', code: 'ASC', id: 'ASC' },
-      skip: 40,
-      take: 20,
-    });
-  });
-
-  describe('active booking conflicts', () => {
-    const conflicts = [
-      {
-        id: '40000000-0000-4000-8000-000000000001',
-        date: '2026-09-18',
-        startTime: '09:00:00',
-        endTime: '10:00:00',
-        status: BookingStatus.CONFIRMED,
-      },
-      {
-        id: '40000000-0000-4000-8000-000000000002',
-        date: '2026-09-18',
-        startTime: '11:00:00',
-        endTime: '12:00:00',
-        status: BookingStatus.CHECKED_IN,
-      },
-    ] as Booking[];
-
-    function expectConflictQuery(parameters: Record<string, unknown>) {
-      expect(bookingQuery.where).toHaveBeenCalledWith(
-        'booking.resourceId = :resourceId',
-        { resourceId: resource.id },
-      );
-      // The clock is 2026-09-14T00:00Z, i.e. 07:00 on campus.
-      expect(bookingQuery.andWhere).toHaveBeenCalledWith(
-        expect.stringContaining('booking.endTime > :nowTime'),
-        { ...parameters, today: '2026-09-14', nowTime: '07:00' },
-      );
-      expect(bookingQuery.orderBy).toHaveBeenCalledWith('booking.date', 'ASC');
-      expect(bookingQuery.addOrderBy).toHaveBeenCalledWith(
-        'booking.startTime',
-        'ASC',
-      );
-      expect(bookingQuery.take).toHaveBeenCalledWith(10);
-    }
-
-    it.each([ResourceStatus.MAINTENANCE, ResourceStatus.INACTIVE])(
-      'blocks changing status to %s while bookings are active',
-      async (status) => {
-        bookingQuery.getManyAndCount.mockResolvedValue([conflicts, 12]);
-
-        const failure = service.updateStatus(resource, status);
-        await expect(failure).rejects.toBeInstanceOf(
-          ResourceHasActiveBookingsError,
-        );
-        await expect(failure).rejects.toMatchObject({
-          code: 'RESOURCE_HAS_ACTIVE_BOOKINGS',
-          message: `Resolve 12 active bookings before setting this resource to ${status}.`,
-          conflictCount: 12,
-          conflictingBookings: [
-            {
-              id: conflicts[0].id,
-              date: '2026-09-18',
-              startTime: '09:00',
-              endTime: '10:00',
-              status: 'confirmed',
-            },
-            {
-              id: conflicts[1].id,
-              date: '2026-09-18',
-              startTime: '11:00',
-              endTime: '12:00',
-              status: 'checked_in',
-            },
-          ],
-        });
-        expectConflictQuery({
-          reviewableStatuses: ['pending', 'confirmed'],
-          checkedInStatus: 'checked_in',
-        });
-        expect(bookingQuery.andWhere.mock.calls[0][0]).toContain(
-          'OR booking.status = :checkedInStatus',
-        );
-        expect(resourcesRepository.update).not.toHaveBeenCalled();
-      },
-    );
-
-    it('never blocks reactivating a resource', async () => {
-      bookingQuery.getManyAndCount.mockResolvedValue([conflicts, 2]);
-
-      await service.updateStatus(resource, ResourceStatus.ACTIVE);
-      expect(bookingsRepository.createQueryBuilder).not.toHaveBeenCalled();
-      expect(resourcesRepository.update).toHaveBeenCalledWith(resource.id, {
-        status: ResourceStatus.ACTIVE,
-      });
-    });
-
-    it('blocks a closure on a date with active bookings', async () => {
-      bookingQuery.getManyAndCount.mockResolvedValue([[conflicts[0]], 1]);
-
-      await expect(
-        service.createClosure(resource.id, {
-          date: '2026-09-18',
-          reason: 'Campus maintenance',
-        }),
-      ).rejects.toMatchObject({
-        message:
-          'Resolve 1 active booking before closing this resource on 2026-09-18.',
-        conflictCount: 1,
-      });
-      expectConflictQuery({
-        closureDate: '2026-09-18',
-        reviewableStatuses: ['pending', 'confirmed'],
-        checkedInStatus: 'checked_in',
-      });
-      expect(closuresRepository.save).not.toHaveBeenCalled();
-    });
-
-    it('creates a closure when no active booking remains on that date', async () => {
-      await service.createClosure(resource.id, {
-        date: '2026-09-18',
-        reason: 'Campus maintenance',
-      });
-      expect(bookingsRepository.createQueryBuilder).toHaveBeenCalled();
-      expect(closuresRepository.save).toHaveBeenCalled();
-    });
-
-    it('blocks a schedule change that would exclude active bookings', async () => {
-      const scheduled = {
-        ...resource,
-        operatingDays: [1, 2, 3, 4, 5, 6],
-      } as Resource;
-      queryBuilder.getOne.mockResolvedValue(scheduled);
-      bookingQuery.getManyAndCount.mockResolvedValue([[conflicts[0]], 1]);
-
-      await expect(
-        service.update(scheduled, {
-          operatingDays: [1, 2, 3],
-          opensAt: '10:00',
-        }),
-      ).rejects.toMatchObject({
-        code: 'RESOURCE_HAS_ACTIVE_BOOKINGS',
-        message:
-          'Resolve 1 active booking outside the new operating schedule before saving it.',
-      });
-      expectConflictQuery({
-        reviewableStatuses: ['pending', 'confirmed'],
-        checkedInStatus: 'checked_in',
-        operatingDays: [1, 2, 3],
-        opensAt: '10:00',
-        closesAt: '18:00',
-      });
-      const condition = bookingQuery.andWhere.mock.calls[0][0] as string;
-      expect(condition).toContain('EXTRACT(DOW FROM booking.date)');
-      expect(condition).toContain('booking.startTime < :opensAt');
-      expect(condition).toContain('booking.endTime > :closesAt');
-      expect(resourcesRepository.update).not.toHaveBeenCalled();
-    });
-
-    it('does not check bookings when the schedule is unchanged', async () => {
-      const scheduled = {
-        ...resource,
-        operatingDays: [1, 2, 3, 4, 5, 6],
-      } as Resource;
-      queryBuilder.getOne.mockResolvedValue(scheduled);
-
-      await service.update(scheduled, { name: 'Renamed room' });
-      await service.update(scheduled, {
-        operatingDays: [6, 5, 4, 3, 2, 1],
-        opensAt: '08:00',
-        closesAt: '18:00',
-      });
-      expect(bookingsRepository.createQueryBuilder).not.toHaveBeenCalled();
-      expect(resourcesRepository.update).toHaveBeenCalledTimes(2);
+  it('lists buildings ordered by name', async () => {
+    await service.findBuildings();
+    expect(buildingsRepository.find).toHaveBeenCalledWith({
+      order: { name: 'ASC' },
     });
   });
 });

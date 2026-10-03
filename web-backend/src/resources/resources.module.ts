@@ -2,20 +2,17 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Booking } from '../bookings/entities/booking.entity';
 import { CAMPUS_CLOCK } from '../common/time/campus-clock';
-import { AdminResourcesController } from './admin-resources.controller';
 import { ResourcesController } from './resources.controller';
 import { Building } from './entities/building.entity';
 import { ResourceClosure } from './entities/resource-closure.entity';
 import { Resource } from './entities/resource.entity';
 import { ResourcesService } from './resources.service';
-import { EventsModule } from '../events/events.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Building, Resource, ResourceClosure, Booking]),
-    EventsModule,
   ],
-  controllers: [AdminResourcesController, ResourcesController],
+  controllers: [ResourcesController],
   providers: [
     ResourcesService,
     { provide: CAMPUS_CLOCK, useValue: () => new Date() },

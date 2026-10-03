@@ -33,29 +33,21 @@ const room: Resource = {
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
 
-const laboratory: Resource = {
+const seminar: Resource = {
   ...room,
   id: "20000000-0000-4000-8000-000000000003",
-  code: "LAB-L201",
-  name: "Teaching Laboratory L201",
-  type: "laboratory",
+  code: "ROOM-B204",
+  name: "Seminar Room B204",
+  type: "room",
   capacity: 24,
   location: "Second floor",
-  amenities: ["workstations", "projector"],
+  amenities: ["projector screen", "microphone"],
   requiresApproval: true,
-};
-
-const user = {
-  id: "30000000-0000-4000-8000-000000000001",
-  email: "student@usth.edu.vn",
-  fullName: "Campus Student",
-  role: "student" as const,
-  createdAt: "2026-01-01T00:00:00.000Z",
 };
 
 function page(overrides: Partial<ResourcePage> = {}): ResourcePage {
   return {
-    items: [room, laboratory],
+    items: [room, seminar],
     total: 10,
     page: 2,
     pageSize: 9,
@@ -65,16 +57,14 @@ function page(overrides: Partial<ResourcePage> = {}): ResourcePage {
 }
 
 describe("ResourceDirectory", () => {
-  it("renders live campus resource facts and populated filters", () => {
+  it("renders live campus room facts and populated filters", () => {
     render(
       <ResourceDirectory
-        user={user}
         page={page()}
         buildings={[building]}
         filters={{
           q: "study",
           buildingId: building.id,
-          type: "room",
           minCapacity: 8,
           amenity: "whiteboard",
           sort: "capacity_desc",
@@ -85,21 +75,20 @@ describe("ResourceDirectory", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "Find the right place or equipment.",
+        name: "Find the right room on campus.",
       }),
     ).toBeVisible();
-    expect(screen.getByLabelText("Resource or location")).toHaveValue("study");
+    expect(screen.getByLabelText("Room or location")).toHaveValue("study");
     expect(screen.getByLabelText("Building")).toHaveValue(building.id);
-    expect(screen.getByLabelText("Resource type")).toHaveValue("room");
     expect(screen.getByLabelText("Minimum capacity")).toHaveValue(8);
-    expect(screen.getByLabelText("Amenity or equipment")).toHaveValue(
-      "whiteboard",
-    );
+    expect(screen.getByLabelText("Amenity")).toHaveValue("whiteboard");
     expect(screen.getByLabelText("Sort results")).toHaveValue("capacity_desc");
     expect(
-      screen.getByRole("link", { name: "Clear 5 filters" }),
+      screen.getByRole("link", { name: "Clear 4 filters" }),
     ).toHaveAttribute("href", "/resources");
-    expect(screen.getByRole("navigation", { name: "Resource navigation" })).toBeVisible();
+    expect(
+      screen.getByRole("navigation", { name: "Resource navigation" }),
+    ).toBeVisible();
     expect(screen.getByRole("link", { name: "My bookings" })).toHaveAttribute(
       "href",
       "/bookings",
@@ -116,16 +105,15 @@ describe("ResourceDirectory", () => {
       within(roomCard).getByRole("link", { name: "View resource details" }),
     ).toHaveAttribute("href", `/resources/${room.id}`);
 
-    const labCard = screen
-      .getByText("Teaching Laboratory L201")
+    const seminarCard = screen
+      .getByText("Seminar Room B204")
       .closest("article")!;
-    expect(within(labCard).getByText("Staff approval")).toBeVisible();
+    expect(within(seminarCard).getByText("Staff approval")).toBeVisible();
   });
 
   it("accepts a date with both times set to Any, but requires paired interval times", () => {
     render(
       <ResourceDirectory
-        user={user}
         page={page()}
         buildings={[building]}
         filters={{}}
@@ -180,7 +168,6 @@ describe("ResourceDirectory", () => {
   it("links date-only results to the full-day slot schedule", () => {
     render(
       <ResourceDirectory
-        user={user}
         page={page({ page: 1 })}
         buildings={[building]}
         filters={{ date: "2099-01-05" }}
@@ -200,7 +187,6 @@ describe("ResourceDirectory", () => {
   it("resets interval controls when normalized URL filters change", () => {
     const view = render(
       <ResourceDirectory
-        user={user}
         page={page()}
         buildings={[building]}
         filters={{
@@ -219,7 +205,6 @@ describe("ResourceDirectory", () => {
 
     view.rerender(
       <ResourceDirectory
-        user={user}
         page={page()}
         buildings={[building]}
         filters={{}}
@@ -234,7 +219,6 @@ describe("ResourceDirectory", () => {
   it("suggests a narrower time search when no resources are free all day", () => {
     render(
       <ResourceDirectory
-        user={user}
         page={page({ items: [], total: 0, page: 1, totalPages: 0 })}
         buildings={[building]}
         filters={{ date: "2099-01-05" }}
@@ -246,7 +230,6 @@ describe("ResourceDirectory", () => {
   it("preserves a complete interval in resource detail links", () => {
     render(
       <ResourceDirectory
-        user={user}
         page={page({ page: 1 })}
         buildings={[building]}
         filters={{
@@ -269,46 +252,42 @@ describe("ResourceDirectory", () => {
   it("remounts all URL-backed controls from canonical filters", () => {
     const view = render(
       <ResourceDirectory
-        user={user}
         page={page()}
         buildings={[building]}
-        filters={{ q: "room", type: "room", minCapacity: 8 }}
+        filters={{ q: "room", minCapacity: 8 }}
       />,
     );
-    const search = screen.getByLabelText("Resource or location");
+    const search = screen.getByLabelText("Room or location");
     fireEvent.change(search, { target: { value: "dirty value" } });
 
     view.rerender(
       <ResourceDirectory
-        user={user}
         page={page()}
         buildings={[building]}
-        filters={{ q: "lab", type: "laboratory", minCapacity: 20 }}
+        filters={{ q: "seminar", minCapacity: 20 }}
       />,
     );
 
-    expect(screen.getByLabelText("Resource or location")).toHaveValue("lab");
-    expect(screen.getByLabelText("Resource type")).toHaveValue("laboratory");
+    expect(screen.getByLabelText("Room or location")).toHaveValue("seminar");
     expect(screen.getByLabelText("Minimum capacity")).toHaveValue(20);
   });
 
   it("preserves filters in pagination links", () => {
     render(
       <ResourceDirectory
-        user={user}
         page={page()}
         buildings={[building]}
-        filters={{ q: "room", type: "room", sort: "capacity_asc", page: 2 }}
+        filters={{ q: "room", sort: "capacity_asc", page: 2 }}
       />,
     );
 
     expect(screen.getByRole("link", { name: "Previous" })).toHaveAttribute(
       "href",
-      "/resources?q=room&type=room&sort=capacity_asc",
+      "/resources?q=room&sort=capacity_asc",
     );
     expect(screen.getByRole("link", { name: "Next" })).toHaveAttribute(
       "href",
-      "/resources?q=room&type=room&sort=capacity_asc&page=3",
+      "/resources?q=room&sort=capacity_asc&page=3",
     );
     expect(screen.getByRole("link", { name: "2" })).toHaveAttribute(
       "aria-current",
@@ -319,7 +298,6 @@ describe("ResourceDirectory", () => {
   it("gives useful direction when no resources match", () => {
     render(
       <ResourceDirectory
-        user={user}
         page={page({ items: [], total: 0, page: 1, totalPages: 0 })}
         buildings={[building]}
         filters={{ amenity: "microscope" }}

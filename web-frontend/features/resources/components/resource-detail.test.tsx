@@ -15,32 +15,24 @@ vi.mock("@/features/bookings/api/browser", () => ({
 
 const mockedCreateBooking = vi.mocked(createBookingRequest);
 
-const user = {
-  id: "30000000-0000-4000-8000-000000000001",
-  email: "student@usth.edu.vn",
-  fullName: "Campus Student",
-  role: "student" as const,
-  createdAt: "2026-01-01T00:00:00.000Z",
-};
-
 const resource: Resource = {
   id: "20000000-0000-4000-8000-000000000003",
-  code: "LAB-L201",
-  name: "Teaching Laboratory L201",
-  description: "A supervised laboratory for scheduled practical sessions.",
-  type: "laboratory",
+  code: "ROOM-B204",
+  name: "Seminar Room B204",
+  description: "A supervised room for scheduled practical sessions.",
+  type: "room",
   status: "active",
   capacity: 24,
   location: "Second floor",
-  amenities: ["workstations", "projector"],
+  amenities: ["workstations", "projector screen"],
   requiresApproval: true,
   operatingDays: [1, 2, 3, 4, 5, 6],
   opensAt: "08:00",
   closesAt: "18:00",
   building: {
     id: "10000000-0000-4000-8000-000000000002",
-    code: "LAB",
-    name: "Laboratory Building",
+    code: "SCI",
+    name: "Science Building",
     address: "USTH Campus, Hanoi",
   },
   createdAt: "2026-01-01T00:00:00.000Z",
@@ -49,15 +41,15 @@ const resource: Resource = {
 
 describe("ResourceDetail", () => {
   it("renders location, capacity, amenities, and approval rules", () => {
-    render(<ResourceDetail user={user} resource={resource} />);
+    render(<ResourceDetail resource={resource} />);
 
     expect(
-      screen.getByRole("heading", { name: "Teaching Laboratory L201" }),
+      screen.getByRole("heading", { name: "Seminar Room B204" }),
     ).toBeVisible();
     expect(screen.getByText("24 places")).toBeVisible();
     expect(screen.getByText("Staff approval required")).toBeVisible();
     expect(screen.getByText("workstations")).toBeVisible();
-    expect(screen.getByText("projector")).toBeVisible();
+    expect(screen.getByText("projector screen")).toBeVisible();
     expect(screen.getByText("USTH Campus, Hanoi")).toBeVisible();
     expect(
       screen.getByRole("link", { name: "Back to resource directory" }),
@@ -71,7 +63,7 @@ describe("ResourceDetail", () => {
   });
 
   it("prompts for a date and accurately limits operational availability", () => {
-    render(<ResourceDetail user={user} resource={resource} />);
+    render(<ResourceDetail resource={resource} />);
 
     expect(
       screen.getByRole("heading", { name: "Check availability" }),
@@ -90,7 +82,6 @@ describe("ResourceDetail", () => {
   it("uses the dated availability snapshot for operational facts and approval", () => {
     render(
       <ResourceDetail
-        user={user}
         resource={{ ...resource, requiresApproval: false }}
         checkedDate="2099-01-05"
         selectedSlot={{ startTime: "10:00", endTime: "11:00" }}
@@ -117,7 +108,6 @@ describe("ResourceDetail", () => {
     expect(
       screen.getAllByText(/staff approval required/i).length,
     ).toBeGreaterThan(0);
-    expect(screen.getByText("Staff approval")).toBeVisible();
     expect(
       screen.getByText(/When this date was checked, the resource required staff approval/),
     ).toBeVisible();
@@ -144,7 +134,6 @@ describe("ResourceDetail", () => {
 
     render(
       <ResourceDetail
-        user={user}
         resource={resource}
         availability={availability}
         checkedDate={availability.date}
@@ -154,7 +143,7 @@ describe("ResourceDetail", () => {
 
     expect(screen.getByText("2 operational hourly slots")).toBeVisible();
     expect(
-      screen.getByText(/Pending, confirmed, and checked-in bookings are excluded/),
+      screen.getByText(/Confirmed bookings are excluded/),
     ).toBeVisible();
     expect(
       screen.getByRole("button", { name: "08:00 to 09:00" }),
@@ -198,7 +187,6 @@ describe("ResourceDetail", () => {
 
     render(
       <ResourceDetail
-        user={user}
         resource={resource}
         availability={availability}
         checkedDate={availability.date}
@@ -243,7 +231,6 @@ describe("ResourceDetail", () => {
 
     render(
       <ResourceDetail
-        user={user}
         resource={resource}
         availability={availability}
         checkedDate={availability.date}
@@ -289,7 +276,6 @@ describe("ResourceDetail", () => {
 
     render(
       <ResourceDetail
-        user={user}
         resource={resource}
         availability={availability}
         checkedDate={availability.date}
@@ -330,7 +316,6 @@ describe("ResourceDetail", () => {
 
     render(
       <ResourceDetail
-        user={user}
         resource={resource}
         availability={availability}
         checkedDate={availability.date}
@@ -360,7 +345,6 @@ describe("ResourceDetail", () => {
     };
     const view = render(
       <ResourceDetail
-        user={user}
         resource={resource}
         availability={availability}
         checkedDate={availability.date}
@@ -372,7 +356,6 @@ describe("ResourceDetail", () => {
 
     view.rerender(
       <ResourceDetail
-        user={user}
         resource={resource}
         availability={availability}
         checkedDate={availability.date}
@@ -402,18 +385,16 @@ describe("ResourceDetail", () => {
     };
     mockedCreateBooking.mockResolvedValueOnce({
       id: "40000000-0000-4000-8000-000000000001",
-      requesterId: user.id,
       resourceId: resource.id,
       date: availability.date,
       startTime: "09:00",
       endTime: "10:00",
       timeZone: "Asia/Ho_Chi_Minh",
-      status: "pending",
+      status: "confirmed",
       createdAt: "2026-09-15T00:00:00.000Z",
     });
     const view = render(
       <ResourceDetail
-        user={user}
         resource={resource}
         availability={availability}
         checkedDate={availability.date}
@@ -424,13 +405,10 @@ describe("ResourceDetail", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "Send booking request" }),
     );
-    expect(
-      await screen.findByText("Request sent — pending staff approval."),
-    ).toBeVisible();
+    expect(await screen.findByText("Booking confirmed.")).toBeVisible();
 
     view.rerender(
       <ResourceDetail
-        user={user}
         resource={resource}
         availability={availability}
         checkedDate={availability.date}
@@ -443,14 +421,13 @@ describe("ResourceDetail", () => {
       screen.getByRole("button", { name: "Send booking request" }),
     ).toBeEnabled();
     expect(
-      screen.queryByText("Request sent — pending staff approval."),
+      screen.queryByText("Booking confirmed."),
     ).not.toBeInTheDocument();
   });
 
   it("explains when bookings occupy every operational slot", () => {
     render(
       <ResourceDetail
-        user={user}
         resource={resource}
         checkedDate="2099-01-05"
         availability={{
@@ -482,7 +459,6 @@ describe("ResourceDetail", () => {
   it("renders closure reasons without fabricating slots", () => {
     render(
       <ResourceDetail
-        user={user}
         resource={resource}
         checkedDate="2026-09-18"
         availability={{
@@ -509,12 +485,11 @@ describe("ResourceDetail", () => {
   it("shows approval policy and a useful amenities fallback", () => {
     render(
       <ResourceDetail
-        user={user}
         resource={{
           ...resource,
           id: "20000000-0000-4000-8000-000000000004",
-          type: "equipment",
-          name: "Portable Projector 01",
+          type: "room",
+          name: "Meeting Room C110",
           capacity: 1,
           description: null,
           amenities: [],
@@ -536,7 +511,6 @@ describe("ResourceDetail", () => {
   it("explains a selected interval that is no longer available", () => {
     render(
       <ResourceDetail
-        user={user}
         resource={resource}
         checkedDate="2099-01-05"
         selectedSlot={{ startTime: "09:00", endTime: "11:00" }}
@@ -577,7 +551,6 @@ describe("ResourceDetail", () => {
   it("explains an unavailable selection even when no slots remain", () => {
     render(
       <ResourceDetail
-        user={user}
         resource={resource}
         checkedDate="2099-01-05"
         selectedSlot={{ startTime: "09:00", endTime: "10:00" }}

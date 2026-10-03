@@ -10,7 +10,7 @@ export default function NotFound() {
       description="The link may be outdated, the record may belong to another account, or the resource may no longer be listed."
       action={
         <>
-          <Link href="/dashboard">Return to dashboard</Link>
+          <Link href="/">Return to room search</Link>
           <Link href="/resources">Browse active resources</Link>
         </>
       }

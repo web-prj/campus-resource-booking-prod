@@ -20,13 +20,13 @@ export default function ErrorBoundary({
   return (
     <RouteState
       announceAs="alert"
-      eyebrow="Live data could not be loaded"
+      eyebrow="Data could not be loaded"
       title="This workspace is temporarily unavailable"
       description={`The latest campus data could not be retrieved. Your bookings and account have not been changed.${reference ? ` Support reference: ${reference}.` : ""}`}
       action={
         <>
           <button type="button" onClick={retry}>Try again</button>
-          <Link href="/dashboard">Return to dashboard</Link>
+          <Link href="/">Return to room search</Link>
         </>
       }
     />

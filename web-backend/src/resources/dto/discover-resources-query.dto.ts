@@ -16,7 +16,6 @@ import {
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { TrimString } from '../../common/decorators/normalize.decorator';
 import { IsWithoutNullByte } from '../../common/validators/is-without-null-byte.validator';
-import { ResourceType } from '../enums/resource-type.enum';
 import { DATE_PATTERN, HOUR_PATTERN } from './resource-availability-query.dto';
 
 export enum ResourceSort {
@@ -38,11 +37,6 @@ export class DiscoverResourcesQueryDto {
   @IsOptional()
   @IsUUID()
   buildingId?: string;
-
-  @ApiPropertyOptional({ enum: ResourceType })
-  @IsOptional()
-  @IsEnum(ResourceType)
-  type?: ResourceType;
 
   @ApiPropertyOptional({ minimum: 1, maximum: 10000 })
   @IsOptional()

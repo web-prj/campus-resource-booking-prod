@@ -1,14 +1,11 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
-import { getCurrentUser } from "@/features/auth/api/server";
+import { notFound } from "next/navigation";
 import {
   getResourceAvailability,
   getResourceDetail,
 } from "@/features/resources/api/server";
 import { ResourceDetail } from "@/features/resources/components/resource-detail";
-import { AvailabilityLiveRegion } from "@/features/resources/components/availability-live-region";
 import { resolveSlotSelection } from "@/features/resources/slot-selection";
-import { loginRedirectPath, withSessionRedirect } from "@/lib/api/session";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -26,10 +23,12 @@ function isCalendarDate(value: string | undefined): value is string {
   );
 }
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
-  title: "Resource details",
+  title: "Room details",
   description:
-    "Review a USTH campus resource, its operating schedule, available time slots, location, capacity, amenities, and approval rules.",
+    "Review a USTH campus room, its operating schedule, available time slots, location, capacity, and amenities.",
 };
 
 interface ResourceDetailPageProps {
@@ -56,28 +55,11 @@ export default async function ResourceDetailPage({
       ? query.endTime
       : undefined;
 
-  const returnParams = new URLSearchParams();
-  if (checkedDate) returnParams.set("date", checkedDate);
-  if (checkedDate && selectedStart) returnParams.set("startTime", selectedStart);
-  if (checkedDate && selectedEnd) returnParams.set("endTime", selectedEnd);
-  const returnQuery = returnParams.toString();
-  const returnTo = `/resources/${id}${returnQuery ? `?${returnQuery}` : ""}`;
-
-  const user = await getCurrentUser();
-  if (!user) redirect(loginRedirectPath(returnTo));
-
-  const { resource, availability } = await withSessionRedirect(
-    returnTo,
-    async () => {
-      const resource = await getResourceDetail(id);
-      if (!resource) return { resource: null, availability: null };
-      const availability = checkedDate
-        ? await getResourceAvailability(id, checkedDate)
-        : null;
-      return { resource, availability };
-    },
-  );
+  const resource = await getResourceDetail(id);
   if (!resource) notFound();
+  const availability = checkedDate
+    ? await getResourceAvailability(id, checkedDate)
+    : null;
   if (checkedDate && !availability) notFound();
 
   const selection = availability
@@ -86,13 +68,11 @@ export default async function ResourceDetailPage({
 
   return (
     <ResourceDetail
-      user={user}
       resource={resource}
       availability={availability}
       checkedDate={checkedDate}
       selectedSlot={selection.selectedSlot}
       isSlotAvailable={selection.isSlotAvailable}
-      liveRegion={<AvailabilityLiveRegion key={checkedDate} resourceId={id} date={checkedDate} />}
     />
   );
 }

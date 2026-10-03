@@ -1,8 +1,6 @@
 import "server-only";
 
-import { cookies } from "next/headers";
 import { getServerApiEndpoint } from "@/lib/api/server-config";
-import { assertSessionActive } from "@/lib/api/session";
 import {
   parseBuildings,
   parseResource,
@@ -22,54 +20,22 @@ async function resourceRequest(
   path: string,
   request: typeof fetch,
 ): Promise<{ status: number; body: unknown }> {
-  const cookieHeader = (await cookies()).toString();
   let response: Response;
 
   try {
     response = await request(getServerApiEndpoint(path), {
-      headers: cookieHeader ? { Cookie: cookieHeader } : undefined,
       cache: "no-store",
     });
   } catch {
     throw new Error("The resource service is unavailable.");
   }
 
-  assertSessionActive(response);
   const body = await response.json().catch(() => null);
   if (!response.ok && response.status !== 404) {
     throw new Error(`Resource lookup failed with ${response.status}.`);
   }
 
   return { status: response.status, body };
-}
-
-export const ADMIN_RESOURCE_PAGE_SIZE = 20;
-
-export async function getAdminResourceCatalog(
-  page = 1,
-  request: typeof fetch = fetch,
-): Promise<{ page: ResourcePage; buildings: Building[] }> {
-  const params = new URLSearchParams({
-    page: String(page),
-    pageSize: String(ADMIN_RESOURCE_PAGE_SIZE),
-  });
-  const [resourceResponse, buildingResponse] = await Promise.all([
-    resourceRequest(`/admin/resources?${params.toString()}`, request),
-    resourceRequest("/admin/resources/buildings", request),
-  ]);
-  const resourcePage = parseResourcePage(resourceResponse.body, 50);
-  const buildings = parseBuildings(buildingResponse.body);
-
-  if (
-    !resourcePage ||
-    !buildings ||
-    resourcePage.page !== page ||
-    resourcePage.pageSize !== ADMIN_RESOURCE_PAGE_SIZE
-  ) {
-    throw new Error("The resource service returned invalid catalog data.");
-  }
-
-  return { page: resourcePage, buildings };
 }
 
 export async function getResourceDirectory(

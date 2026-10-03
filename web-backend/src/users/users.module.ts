@@ -1,14 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AdminUsersController } from './admin-users.controller';
 import { User } from './entities/user.entity';
-import { UserAccessEvents } from './user-access-events';
-import { UsersService } from './users.service';
 
+/** Registers the User entity so bookings can reference their owner. */
 @Module({
   imports: [TypeOrmModule.forFeature([User])],
-  providers: [UsersService, UserAccessEvents],
-  controllers: [AdminUsersController],
-  exports: [UsersService, UserAccessEvents],
+  exports: [TypeOrmModule],
 })
 export class UsersModule {}

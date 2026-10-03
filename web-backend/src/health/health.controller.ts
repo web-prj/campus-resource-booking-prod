@@ -5,7 +5,6 @@ import {
   TypeOrmHealthIndicator,
 } from '@nestjs/terminus';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('health')
 @Controller('health')
@@ -15,8 +14,6 @@ export class HealthController {
     private readonly db: TypeOrmHealthIndicator,
   ) {}
 
-  // Probes run without credentials, so this one route opts out of the guard.
-  @Public()
   @Get()
   @HealthCheck()
   @ApiOperation({ summary: 'Liveness and database connectivity check' })

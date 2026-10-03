@@ -7,12 +7,7 @@ export type BookingErrorCode =
   | 'RESOURCE_UNAVAILABLE'
   | 'BOOKING_OVERLAP'
   | 'BOOKING_NOT_FOUND'
-  | 'BOOKING_NOT_CANCELLABLE'
-  | 'BOOKING_NOT_PENDING'
-  | 'BOOKING_REVIEW_WINDOW_ENDED'
-  | 'CHECK_IN_NOT_AVAILABLE'
-  | 'BOOKING_NOT_CHECKED_IN'
-  | 'NO_SHOW_NOT_AVAILABLE';
+  | 'BOOKING_NOT_CANCELLABLE';
 
 export class BookingDomainError extends Error {
   constructor(

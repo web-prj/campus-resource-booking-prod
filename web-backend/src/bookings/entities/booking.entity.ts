@@ -15,19 +15,8 @@ import { User } from '../../users/entities/user.entity';
 import { BookingStatus } from '../enums/booking-status.enum';
 
 @Entity('bookings')
-@Index('IDX_bookings_analytics_date_status_resource', [
-  'date',
-  'status',
-  'resourceId',
-])
 @Index('IDX_bookings_resource_date', ['resourceId', 'date'])
 @Index('IDX_bookings_requester_created_at', ['requesterId', 'createdAt'])
-@Index('IDX_bookings_pending_created_at', ['createdAt'], {
-  where: `"status" = 'pending'`,
-})
-@Index('IDX_bookings_operations_date_status', ['date', 'startTime', 'status'], {
-  where: `"status" IN ('confirmed', 'checked_in')`,
-})
 @Check('CHK_bookings_time_order', '"start_time" < "end_time"')
 @Check(
   'CHK_bookings_whole_hour',
@@ -38,49 +27,9 @@ import { BookingStatus } from '../enums/booking-status.enum';
   'CHK_bookings_cancellation_state',
   `("status" = 'cancelled' AND "cancelled_at" IS NOT NULL) OR ("status" <> 'cancelled' AND "cancelled_at" IS NULL)`,
 )
-@Check(
-  'CHK_bookings_pending_unreviewed',
-  `"status" <> 'pending' OR "reviewed_at" IS NULL`,
-)
-@Check(
-  'CHK_bookings_review_pair',
-  `("reviewed_at" IS NULL AND "reviewed_by_id" IS NULL) OR ("reviewed_at" IS NOT NULL AND "reviewed_by_id" IS NOT NULL)`,
-)
-@Check(
-  'CHK_bookings_rejection_state',
-  `("status" = 'rejected' AND "rejection_reason" IS NOT NULL AND "reviewed_at" IS NOT NULL) OR ("status" <> 'rejected' AND "rejection_reason" IS NULL)`,
-)
-@Check(
-  'CHK_bookings_rejection_reason_content',
-  `"status" <> 'rejected' OR char_length(btrim("rejection_reason")) BETWEEN 3 AND 500`,
-)
-@Check(
-  'CHK_bookings_check_in_request',
-  `"check_in_code" IS NULL AND ("check_in_requested_at" IS NULL OR "status" IN ('confirmed', 'checked_in', 'completed', 'no_show'))`,
-)
-@Check(
-  'CHK_bookings_check_in_timeline',
-  `("check_in_requested_at" IS NULL OR ("check_in_requested_at" >= (("booking_date" + "start_time") AT TIME ZONE 'Asia/Ho_Chi_Minh') - INTERVAL '15 minutes' AND "check_in_requested_at" < ("booking_date" + "end_time") AT TIME ZONE 'Asia/Ho_Chi_Minh')) AND ("checked_in_at" IS NULL OR (("check_in_requested_at" IS NULL OR "checked_in_at" >= "check_in_requested_at") AND "checked_in_at" >= (("booking_date" + "start_time") AT TIME ZONE 'Asia/Ho_Chi_Minh') - INTERVAL '15 minutes' AND "checked_in_at" < ("booking_date" + "end_time") AT TIME ZONE 'Asia/Ho_Chi_Minh')) AND ("checked_out_at" IS NULL OR "checked_out_at" >= "checked_in_at")`,
-)
-@Check(
-  'CHK_bookings_no_show_timeline',
-  `"no_show_at" IS NULL OR "no_show_at" >= (("booking_date" + "end_time") AT TIME ZONE 'Asia/Ho_Chi_Minh')`,
-)
-@Check(
-  'CHK_bookings_checked_in_state',
-  `("status" IN ('checked_in', 'completed') AND "checked_in_at" IS NOT NULL AND "checked_in_by_id" IS NOT NULL) OR ("status" NOT IN ('checked_in', 'completed') AND "checked_in_at" IS NULL AND "checked_in_by_id" IS NULL)`,
-)
-@Check(
-  'CHK_bookings_checkout_state',
-  `("status" = 'completed' AND "checked_out_at" IS NOT NULL AND "checked_out_by_id" IS NOT NULL) OR ("status" <> 'completed' AND "checked_out_at" IS NULL AND "checked_out_by_id" IS NULL)`,
-)
-@Check(
-  'CHK_bookings_no_show_state',
-  `("status" = 'no_show' AND "no_show_at" IS NOT NULL) OR ("status" <> 'no_show' AND "no_show_at" IS NULL AND "no_show_by_id" IS NULL)`,
-)
 @Exclusion(
   'EXCL_bookings_resource_period_blocking',
-  `USING gist ("resource_id" WITH =, "booking_period" WITH &&) WHERE ("status" IN ('pending', 'confirmed', 'checked_in'))`,
+  `USING gist ("resource_id" WITH =, "booking_period" WITH &&) WHERE ("status" = 'confirmed')`,
 )
 export class Booking {
   @PrimaryGeneratedColumn('uuid')
@@ -120,76 +69,6 @@ export class Booking {
 
   @Column({ name: 'cancelled_at', type: 'timestamptz', nullable: true })
   cancelledAt: Date | null;
-
-  @Column({ name: 'reviewed_at', type: 'timestamptz', nullable: true })
-  reviewedAt: Date | null;
-
-  @Column({ name: 'reviewed_by_id', type: 'uuid', nullable: true })
-  reviewedById: string | null;
-
-  @ManyToOne(() => User, { onDelete: 'RESTRICT', nullable: true })
-  @JoinColumn({
-    name: 'reviewed_by_id',
-    foreignKeyConstraintName: 'FK_bookings_reviewed_by_id',
-  })
-  reviewer: User | null;
-
-  @Column({
-    name: 'rejection_reason',
-    type: 'varchar',
-    length: 500,
-    nullable: true,
-  })
-  rejectionReason: string | null;
-
-  @Column({ name: 'check_in_code', type: 'varchar', length: 6, nullable: true })
-  checkInCode: string | null;
-
-  @Column({
-    name: 'check_in_requested_at',
-    type: 'timestamptz',
-    nullable: true,
-  })
-  checkInRequestedAt: Date | null;
-
-  @Column({ name: 'checked_in_at', type: 'timestamptz', nullable: true })
-  checkedInAt: Date | null;
-
-  @Column({ name: 'checked_in_by_id', type: 'uuid', nullable: true })
-  checkedInById: string | null;
-
-  @ManyToOne(() => User, { onDelete: 'RESTRICT', nullable: true })
-  @JoinColumn({
-    name: 'checked_in_by_id',
-    foreignKeyConstraintName: 'FK_bookings_checked_in_by_id',
-  })
-  checkedInBy: User | null;
-
-  @Column({ name: 'checked_out_at', type: 'timestamptz', nullable: true })
-  checkedOutAt: Date | null;
-
-  @Column({ name: 'checked_out_by_id', type: 'uuid', nullable: true })
-  checkedOutById: string | null;
-
-  @ManyToOne(() => User, { onDelete: 'RESTRICT', nullable: true })
-  @JoinColumn({
-    name: 'checked_out_by_id',
-    foreignKeyConstraintName: 'FK_bookings_checked_out_by_id',
-  })
-  checkedOutBy: User | null;
-
-  @Column({ name: 'no_show_at', type: 'timestamptz', nullable: true })
-  noShowAt: Date | null;
-
-  @Column({ name: 'no_show_by_id', type: 'uuid', nullable: true })
-  noShowById: string | null;
-
-  @ManyToOne(() => User, { onDelete: 'RESTRICT', nullable: true })
-  @JoinColumn({
-    name: 'no_show_by_id',
-    foreignKeyConstraintName: 'FK_bookings_no_show_by_id',
-  })
-  noShowBy: User | null;
 
   @Column({
     name: 'booking_period',

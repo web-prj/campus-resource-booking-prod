@@ -8,13 +8,13 @@ import { BookingDomainError } from './errors/booking-domain.error';
 import { BookingsService } from './bookings.service';
 
 const requesterId = '30000000-0000-4000-8000-000000000001';
+const bookingId = '40000000-0000-4000-8000-000000000001';
 const resource = {
   id: '20000000-0000-4000-8000-000000000001',
   status: ResourceStatus.ACTIVE,
   operatingDays: [1, 2, 3, 4, 5, 6],
   opensAt: '08:00:00',
   closesAt: '18:00:00',
-  requiresApproval: false,
 } as Resource;
 const request = {
   resourceId: resource.id,
@@ -23,7 +23,10 @@ const request = {
   endTime: '11:00',
 };
 
-function createHarness(overrides: Partial<Resource> = {}) {
+function createHarness(
+  overrides: Partial<Resource> = {},
+  nowIso = '2026-09-15T00:00:00.000Z',
+) {
   const selectedResource = { ...resource, ...overrides } as Resource;
   const resourceQuery = {
     setLock: jest.fn(),
@@ -33,16 +36,30 @@ function createHarness(overrides: Partial<Resource> = {}) {
   resourceQuery.setLock.mockReturnValue(resourceQuery);
   resourceQuery.where.mockReturnValue(resourceQuery);
 
+  const lockedBooking: { current: Booking | null } = { current: null };
+  const bookingQuery = {
+    setLock: jest.fn(),
+    where: jest.fn(),
+    andWhere: jest.fn(),
+    getOne: jest.fn(() => Promise.resolve(lockedBooking.current)),
+  };
+  bookingQuery.setLock.mockReturnValue(bookingQuery);
+  bookingQuery.where.mockReturnValue(bookingQuery);
+  bookingQuery.andWhere.mockReturnValue(bookingQuery);
+
   const bookingRepository = {
     create: jest.fn((value: Partial<Booking>) => value as Booking),
     save: jest.fn(
       async (value: Booking) =>
         ({
           ...value,
-          id: '40000000-0000-4000-8000-000000000001',
+          id: bookingId,
           createdAt: new Date('2026-09-15T00:00:00.000Z'),
         }) as Booking,
     ),
+    createQueryBuilder: jest.fn().mockReturnValue(bookingQuery),
+    update: jest.fn().mockResolvedValue(undefined),
+    findOne: jest.fn(async () => lockedBooking.current),
   };
   const closureRepository = { existsBy: jest.fn().mockResolvedValue(false) };
   const resourceRepository = {
@@ -61,16 +78,15 @@ function createHarness(overrides: Partial<Resource> = {}) {
       async (operation: (value: typeof manager) => unknown) =>
         operation(manager),
     ),
-  };
-  const availabilityEvents = {
-    notifyAvailabilityChanged: jest.fn(),
-    notifyResourceChanged: jest.fn(),
+    getRepository: jest.fn((entity: unknown) => {
+      if (entity === Booking) return bookingRepository;
+      throw new Error('Unexpected repository');
+    }),
   };
 
   const service = new BookingsService(
     dataSource as never,
-    () => new Date('2026-09-15T00:00:00.000Z'),
-    availabilityEvents as never,
+    () => new Date(nowIso),
   );
 
   return {
@@ -79,35 +95,32 @@ function createHarness(overrides: Partial<Resource> = {}) {
     resourceQuery,
     closureRepository,
     bookingRepository,
+    setLockedBooking: (booking: Booking) => {
+      lockedBooking.current = booking;
+    },
   };
 }
 
 describe('BookingsService', () => {
-  it.each([
-    [false, BookingStatus.CONFIRMED],
-    [true, BookingStatus.PENDING],
-  ])(
-    'derives approval status from the locked resource',
-    async (requiresApproval, status) => {
-      const harness = createHarness({ requiresApproval });
+  it('creates every booking confirmed immediately', async () => {
+    const harness = createHarness();
 
-      await expect(
-        harness.service.create(requesterId, request),
-      ).resolves.toMatchObject({
-        requesterId,
-        resourceId: resource.id,
-        status,
-      });
-      expect(harness.resourceQuery.setLock).toHaveBeenCalledWith(
-        'pessimistic_write',
-      );
-      expect(harness.bookingRepository.create).toHaveBeenCalledWith({
-        ...request,
-        requesterId,
-        status,
-      });
-    },
-  );
+    await expect(
+      harness.service.create(requesterId, request),
+    ).resolves.toMatchObject({
+      requesterId,
+      resourceId: resource.id,
+      status: BookingStatus.CONFIRMED,
+    });
+    expect(harness.resourceQuery.setLock).toHaveBeenCalledWith(
+      'pessimistic_write',
+    );
+    expect(harness.bookingRepository.create).toHaveBeenCalledWith({
+      ...request,
+      requesterId,
+      status: BookingStatus.CONFIRMED,
+    });
+  });
 
   it.each([
     [{ ...request, date: '2026-02-30' }, 'INVALID_BOOKING_DATE'],
@@ -131,9 +144,7 @@ describe('BookingsService', () => {
 
     await expect(
       harness.service.create(requesterId, value),
-    ).rejects.toMatchObject({
-      code,
-    });
+    ).rejects.toMatchObject({ code });
     expect(harness.dataSource.transaction).not.toHaveBeenCalled();
   });
 
@@ -162,9 +173,7 @@ describe('BookingsService', () => {
 
       await expect(
         harness.service.create(requesterId, request),
-      ).rejects.toMatchObject({
-        code: 'RESOURCE_UNAVAILABLE',
-      });
+      ).rejects.toMatchObject({ code: 'RESOURCE_UNAVAILABLE' });
       expect(harness.bookingRepository.save).not.toHaveBeenCalled();
     },
   );
@@ -174,59 +183,21 @@ describe('BookingsService', () => {
     unknown.resourceQuery.getOne.mockResolvedValue(null);
     await expect(
       unknown.service.create(requesterId, request),
-    ).rejects.toMatchObject({
-      code: 'RESOURCE_NOT_FOUND',
-    });
+    ).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
 
     const closed = createHarness();
     closed.closureRepository.existsBy.mockResolvedValue(true);
     await expect(
       closed.service.create(requesterId, request),
-    ).rejects.toMatchObject({
-      code: 'RESOURCE_UNAVAILABLE',
-    });
+    ).rejects.toMatchObject({ code: 'RESOURCE_UNAVAILABLE' });
   });
 
-  it('enforces exact check-in and no-show capability boundaries', () => {
-    const harness = createHarness();
-    const booking = {
-      status: BookingStatus.CONFIRMED,
-      date: '2026-09-15',
-      startTime: '09:00:00',
-      endTime: '10:00:00',
-      checkInRequestedAt: null,
-    } as Booking;
-    const beforeWindow = new Date('2026-09-15T01:59:59.999Z'); // 08:59:59
-    const atWindow = new Date('2026-09-15T02:00:00.000Z'); // 09:00
-    const beforeDeadline = new Date('2026-09-15T02:59:59.999Z'); // 09:59:59
-    const atDeadline = new Date('2026-09-15T03:00:00.000Z'); // 10:00
-
-    expect(harness.service.canConfirmCheckIn(booking, beforeWindow)).toBe(
-      false,
-    );
-    expect(harness.service.canConfirmCheckIn(booking, atWindow)).toBe(true);
-    expect(harness.service.canConfirmCheckIn(booking, beforeDeadline)).toBe(
-      true,
-    );
-    expect(harness.service.canConfirmCheckIn(booking, atDeadline)).toBe(false);
-    expect(
-      harness.service.canConfirmCheckIn(
-        { ...booking, status: BookingStatus.CHECKED_IN },
-        atWindow,
-      ),
-    ).toBe(false);
-    expect(harness.service.canMarkNoShow(booking, beforeDeadline)).toBe(false);
-    expect(harness.service.canMarkNoShow(booking, atDeadline)).toBe(true);
-    expect(harness.service.checkInDeadline(booking)).toEqual(atDeadline);
-  });
-
-  it('allows cancellation before start even with a legacy check-in request', () => {
+  it('allows cancellation only for a future confirmed booking', () => {
     const { service } = createHarness();
     const booking = {
       status: BookingStatus.CONFIRMED,
       date: '2026-09-15',
       startTime: '09:00:00',
-      checkInRequestedAt: new Date('2026-09-15T01:45:00.000Z'),
     } as Booking;
 
     expect(
@@ -237,34 +208,53 @@ describe('BookingsService', () => {
     ).toBe(false);
     expect(
       service.canCancel(
-        { ...booking, status: BookingStatus.CHECKED_IN },
+        { ...booking, status: BookingStatus.CANCELLED },
         new Date('2026-09-15T01:50:00.000Z'),
       ),
     ).toBe(false);
   });
 
-  it('keeps a pending booking reviewable until its scheduled end', () => {
-    const harness = createHarness();
-    const booking = {
-      status: BookingStatus.PENDING,
+  it('cancels a future confirmed booking', async () => {
+    const harness = createHarness({}, '2026-09-15T00:00:00.000Z'); // 07:00
+    harness.setLockedBooking({
+      id: bookingId,
+      status: BookingStatus.CONFIRMED,
       date: '2026-09-15',
-      startTime: '08:00:00',
+      startTime: '09:00:00',
       endTime: '10:00:00',
-    } as Booking;
+    } as Booking);
 
-    // The deadline is 10:00 on campus, 03:00 UTC.
-    expect(
-      harness.service.canReview(booking, new Date('2026-09-15T02:59:59.999Z')),
-    ).toBe(true);
-    expect(
-      harness.service.canReview(booking, new Date('2026-09-15T03:00:00.000Z')),
-    ).toBe(false);
-    expect(
-      harness.service.canReview(
-        { ...booking, status: BookingStatus.CONFIRMED },
-        new Date('2026-09-15T01:00:00.000Z'),
-      ),
-    ).toBe(false);
+    await harness.service.cancel(requesterId, bookingId);
+
+    expect(harness.bookingRepository.update).toHaveBeenCalledWith(
+      bookingId,
+      expect.objectContaining({ status: BookingStatus.CANCELLED }),
+    );
+  });
+
+  it('rejects cancelling a booking that is not found', async () => {
+    const harness = createHarness();
+
+    await expect(
+      harness.service.cancel(requesterId, bookingId),
+    ).rejects.toMatchObject({ code: 'BOOKING_NOT_FOUND' });
+    expect(harness.bookingRepository.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects cancelling a booking whose start has passed', async () => {
+    const harness = createHarness({}, '2026-09-15T03:00:00.000Z'); // 10:00
+    harness.setLockedBooking({
+      id: bookingId,
+      status: BookingStatus.CONFIRMED,
+      date: '2026-09-15',
+      startTime: '09:00:00',
+      endTime: '10:00:00',
+    } as Booking);
+
+    await expect(
+      harness.service.cancel(requesterId, bookingId),
+    ).rejects.toMatchObject({ code: 'BOOKING_NOT_CANCELLABLE' });
+    expect(harness.bookingRepository.update).not.toHaveBeenCalled();
   });
 
   it('reports whether a booking has reached its scheduled end', () => {
@@ -310,120 +300,5 @@ describe('BookingsService', () => {
     await expect(unrelated.service.create(requesterId, request)).rejects.toBe(
       otherFailure,
     );
-  });
-
-  describe('staff queues', () => {
-    function queueHarness(now: string) {
-      const findAndCount = jest.fn().mockResolvedValue([[], 57]);
-      const service = new BookingsService(
-        { getRepository: jest.fn().mockReturnValue({ findAndCount }) } as never,
-        () => new Date(now),
-        {} as never,
-      );
-      return { service, findAndCount };
-    }
-
-    it('filters reviewable pending requests in SQL and paginates oldest first', async () => {
-      // 10:30 on campus (UTC+7); requests ending after 10:30 are reviewable.
-      const { service, findAndCount } = queueHarness(
-        '2026-09-15T03:30:00.000Z',
-      );
-
-      await expect(service.findPendingForStaff(3, 20)).resolves.toMatchObject({
-        bookings: [],
-        total: 57,
-      });
-      const [options] = findAndCount.mock.calls[0];
-      expect(options).toMatchObject({
-        order: { createdAt: 'ASC', id: 'ASC' },
-        skip: 40,
-        take: 20,
-      });
-      expect(options.where).toEqual([
-        {
-          status: BookingStatus.PENDING,
-          date: expect.objectContaining({
-            _type: 'moreThan',
-            _value: '2026-09-15',
-          }),
-        },
-        {
-          status: BookingStatus.PENDING,
-          date: '2026-09-15',
-          endTime: expect.objectContaining({
-            _type: 'moreThan',
-            _value: '10:30',
-          }),
-        },
-      ]);
-    });
-
-    it('uses the campus date, not the UTC date, near midnight', async () => {
-      // 2026-09-15 23:30 UTC is 06:30 on 2026-09-16 on campus.
-      const { service, findAndCount } = queueHarness(
-        '2026-09-15T23:30:00.000Z',
-      );
-
-      await service.findPendingForStaff(1, 20);
-      const [options] = findAndCount.mock.calls[0];
-      expect(options.where[1]).toMatchObject({
-        date: '2026-09-16',
-        endTime: expect.objectContaining({ _value: '06:30' }),
-      });
-    });
-
-    it('excludes previous-day requests after midnight', async () => {
-      // 2026-09-15 17:10 UTC is 00:10 on 2026-09-16 on campus.
-      const { service, findAndCount } = queueHarness(
-        '2026-09-15T17:10:00.000Z',
-      );
-
-      await service.findPendingForStaff(1, 20);
-      const [options] = findAndCount.mock.calls[0];
-      expect(options.where).toEqual([
-        expect.objectContaining({
-          date: expect.objectContaining({ _value: '2026-09-16' }),
-        }),
-        expect.objectContaining({
-          date: '2026-09-16',
-          endTime: expect.objectContaining({ _value: '00:10' }),
-        }),
-      ]);
-    });
-
-    it('paginates current and overdue operations with a stable order', async () => {
-      const { service, findAndCount } = queueHarness(
-        '2026-09-15T23:30:00.000Z',
-      );
-
-      await expect(
-        service.findOperationsForStaff(2, 10),
-      ).resolves.toMatchObject({
-        total: 57,
-        campusDate: '2026-09-16',
-      });
-      const [options] = findAndCount.mock.calls[0];
-      expect(options).toMatchObject({
-        order: { date: 'ASC', startTime: 'ASC', createdAt: 'ASC', id: 'ASC' },
-        skip: 10,
-        take: 10,
-      });
-      expect(options.where).toEqual([
-        {
-          date: expect.objectContaining({
-            _type: 'lessThanOrEqual',
-            _value: '2026-09-16',
-          }),
-          status: BookingStatus.CONFIRMED,
-        },
-        {
-          date: expect.objectContaining({
-            _type: 'lessThanOrEqual',
-            _value: '2026-09-16',
-          }),
-          status: BookingStatus.CHECKED_IN,
-        },
-      ]);
-    });
   });
 });

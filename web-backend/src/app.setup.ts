@@ -1,9 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-import { AppConfig, AuthConfig } from './config';
-import { ConfigIoAdapter } from './events/config-io.adapter';
+import { AppConfig } from './config';
 import { setupSwagger } from './swagger';
 
 export interface AppSetupOptions {
@@ -11,15 +9,13 @@ export interface AppSetupOptions {
   enableSwagger?: boolean;
 }
 
-/** Shared HTTP pipeline for production bootstrap and e2e tests. */
+/** Shared HTTP pipeline for bootstrap. */
 export function configureApp(
   app: NestExpressApplication,
   appConfig: AppConfig,
-  authConfig: AuthConfig,
   options: AppSetupOptions = {},
 ): void {
   app.setGlobalPrefix(appConfig.apiPrefix);
-  app.use(cookieParser());
   app.use(helmet());
 
   if (appConfig.isProduction) {
@@ -35,12 +31,10 @@ export function configureApp(
     }),
   );
 
-  app.enableCors({ origin: appConfig.corsOrigins, credentials: true });
-  // WebSocket handshakes use the same credentialed origin allow-list.
-  app.useWebSocketAdapter(new ConfigIoAdapter(app, appConfig.corsOrigins));
+  app.enableCors({ origin: appConfig.corsOrigins });
 
   if (options.enableSwagger) {
-    setupSwagger(app, appConfig.apiPrefix, authConfig.cookie.name);
+    setupSwagger(app, appConfig.apiPrefix);
   }
 
   if (options.enableShutdownHooks) {

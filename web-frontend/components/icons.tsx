@@ -67,15 +67,6 @@ export function ClockIcon(props: IconProps) {
   );
 }
 
-export function EquipmentIcon(props: IconProps) {
-  return (
-    <svg {...sharedProps} {...props}>
-      <rect x="3.5" y="4" width="17" height="11.5" rx="2" />
-      <path d="M8 20h8M12 15.5V20M8 8h8" />
-    </svg>
-  );
-}
-
 export function EyeIcon(props: IconProps) {
   return (
     <svg {...sharedProps} {...props}>
@@ -102,15 +93,6 @@ export function GridIcon(props: IconProps) {
       <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
       <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
       <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
-    </svg>
-  );
-}
-
-export function LaboratoryIcon(props: IconProps) {
-  return (
-    <svg {...sharedProps} {...props}>
-      <path d="M9 3h6M10 3v6l-5 8.2A2.5 2.5 0 0 0 7.1 21h9.8a2.5 2.5 0 0 0 2.1-3.8L14 9V3" />
-      <path d="M7.5 15h9" />
     </svg>
   );
 }

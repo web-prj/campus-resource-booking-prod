@@ -3,8 +3,6 @@ import { BrandMark } from "@/components/brand-mark";
 import { PaginationNav } from "@/components/pagination-nav";
 import {
   ArrowRightIcon,
-  EquipmentIcon,
-  LaboratoryIcon,
   MapPinIcon,
   PeopleIcon,
   RoomIcon,
@@ -12,8 +10,6 @@ import {
   ShieldCheckIcon,
   SlidersIcon,
 } from "@/components/icons";
-import { LogoutButton } from "@/features/auth/components/logout-button";
-import type { User } from "@/features/auth/types";
 import { discoveryHref } from "../discovery-query";
 import type {
   Building,
@@ -27,21 +23,12 @@ import styles from "./resource-directory.module.css";
 
 const typeLabels: Record<ResourceType, string> = {
   room: "Room",
-  laboratory: "Laboratory",
-  equipment: "Equipment",
 };
-
-function ResourceTypeIcon({ type }: { type: ResourceType }) {
-  if (type === "laboratory") return <LaboratoryIcon />;
-  if (type === "equipment") return <EquipmentIcon />;
-  return <RoomIcon />;
-}
 
 function activeFilterCount(filters: ResourceDiscoveryFilters): number {
   return [
     filters.q,
     filters.buildingId,
-    filters.type,
     filters.minCapacity,
     filters.amenity,
     filters.date,
@@ -52,7 +39,6 @@ function activeFilterCount(filters: ResourceDiscoveryFilters): number {
 function panelFilterCount(filters: ResourceDiscoveryFilters): number {
   return [
     filters.buildingId,
-    filters.type,
     filters.minCapacity,
     filters.amenity,
     filters.date,
@@ -60,14 +46,12 @@ function panelFilterCount(filters: ResourceDiscoveryFilters): number {
 }
 
 interface ResourceDirectoryProps {
-  user: User;
   page: ResourcePage;
   buildings: Building[];
   filters: ResourceDiscoveryFilters;
 }
 
 export function ResourceDirectory({
-  user,
   page,
   buildings,
   filters,
@@ -80,32 +64,21 @@ export function ResourceDirectory({
       <header className={styles.header}>
         <BrandMark />
         <nav className={styles.headerNav} aria-label="Resource navigation">
-          <Link href="/dashboard">Dashboard</Link>
-          <Link href="/resources" aria-current="page">
-            Resources
+          <Link href="/" aria-current="page">
+            Rooms
           </Link>
-          {user.role === "student" && <Link href="/bookings">My bookings</Link>}
+          <Link href="/bookings">My bookings</Link>
         </nav>
-        <div className={styles.identity}>
-          <span>
-            <strong>{user.fullName}</strong>
-            <small>{user.role}</small>
-          </span>
-          <LogoutButton
-            className={styles.logout}
-            errorClassName={styles.logoutError}
-          />
-        </div>
       </header>
 
       <div className={styles.shell}>
         <section className={styles.intro} aria-labelledby="directory-title">
           <div>
-            <p className={styles.context}>Campus resource directory</p>
-            <h1 id="directory-title">Find the right place or equipment.</h1>
+            <p className={styles.context}>Campus room directory</p>
+            <h1 id="directory-title">Find the right room on campus.</h1>
             <p>
-              Compare building, capacity, equipment, and approval rules before
-              checking operational hours.
+              Compare building, capacity, and amenities before checking
+              operational hours.
             </p>
           </div>
           <div className={styles.directoryMark} aria-hidden="true">
@@ -141,7 +114,7 @@ export function ResourceDirectory({
 
           <div className={styles.searchRow}>
             <label className={styles.searchField}>
-              <span>Resource or location</span>
+              <span>Room or location</span>
               <span className={styles.inputWithIcon}>
                 <SearchIcon />
                 <input
@@ -149,7 +122,7 @@ export function ResourceDirectory({
                   type="search"
                   defaultValue={filters.q ?? ""}
                   maxLength={120}
-                  placeholder="Room A101, projector, first floor…"
+                  placeholder="Room A101, first floor…"
                 />
               </span>
             </label>
@@ -176,16 +149,6 @@ export function ResourceDirectory({
             </label>
 
             <label>
-              <span>Resource type</span>
-              <select name="type" defaultValue={filters.type ?? ""}>
-                <option value="">All types</option>
-                <option value="room">Rooms</option>
-                <option value="laboratory">Laboratories</option>
-                <option value="equipment">Equipment</option>
-              </select>
-            </label>
-
-            <label>
               <span>Minimum capacity</span>
               <input
                 name="minCapacity"
@@ -198,7 +161,7 @@ export function ResourceDirectory({
             </label>
 
             <label>
-              <span>Amenity or equipment</span>
+              <span>Amenity</span>
               <input
                 name="amenity"
                 defaultValue={filters.amenity ?? ""}
@@ -314,7 +277,7 @@ function ResourceCard({
     <article className={styles.resourceCard}>
       <div className={styles.cardTopline}>
         <span className={styles.resourceIcon} data-type={resource.type}>
-          <ResourceTypeIcon type={resource.type} />
+          <RoomIcon />
         </span>
         <span className={styles.typeLabel}>{typeLabels[resource.type]}</span>
         <span className={styles.activeStatus}>Active</span>

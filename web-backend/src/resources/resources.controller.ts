@@ -11,12 +11,10 @@ import {
 import { CacheInterceptor } from '@nestjs/cache-manager';
 import {
   ApiBadRequestResponse,
-  ApiCookieAuth,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
-  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { DiscoverResourcesQueryDto } from './dto/discover-resources-query.dto';
 import { ResourceAvailabilityQueryDto } from './dto/resource-availability-query.dto';
@@ -31,8 +29,6 @@ import {
 } from './resources.service';
 
 @ApiTags('resources')
-@ApiCookieAuth()
-@ApiUnauthorizedResponse({ description: 'Authentication required' })
 @Controller('resources')
 export class ResourcesController {
   constructor(private readonly resourcesService: ResourcesService) {}

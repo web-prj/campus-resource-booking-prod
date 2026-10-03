@@ -1,19 +1,14 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { BookingRequestForm } from "@/features/bookings/components/booking-request-form";
 import { BrandMark } from "@/components/brand-mark";
 import {
   ChevronLeftIcon,
   ClockIcon,
-  EquipmentIcon,
-  LaboratoryIcon,
   MapPinIcon,
   PeopleIcon,
   RoomIcon,
   ShieldCheckIcon,
 } from "@/components/icons";
-import { LogoutButton } from "@/features/auth/components/logout-button";
-import type { User } from "@/features/auth/types";
 import type {
   AvailabilityBlockedReason,
   AvailabilitySlot,
@@ -27,8 +22,6 @@ import styles from "./resource-detail.module.css";
 
 const typeLabels: Record<ResourceType, string> = {
   room: "Room",
-  laboratory: "Laboratory",
-  equipment: "Equipment",
 };
 
 const statusLabels: Record<ResourceStatus, string> = {
@@ -46,34 +39,24 @@ const blockedMessages: Record<AvailabilityBlockedReason, string> = {
 
 const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-function ResourceTypeIcon({ type }: { type: ResourceType }) {
-  if (type === "laboratory") return <LaboratoryIcon />;
-  if (type === "equipment") return <EquipmentIcon />;
-  return <RoomIcon />;
-}
-
 function scheduleDays(days: number[]): string {
   return days.map((day) => dayLabels[day]).join(", ");
 }
 
 interface ResourceDetailProps {
-  user: User;
   resource: Resource;
   availability?: ResourceAvailability | null;
   checkedDate?: string;
   selectedSlot?: AvailabilitySlot;
   isSlotAvailable?: boolean;
-  liveRegion?: ReactNode;
 }
 
 export function ResourceDetail({
-  user,
   resource,
   availability = null,
   checkedDate,
   selectedSlot,
   isSlotAvailable = true,
-  liveRegion,
 }: ResourceDetailProps) {
   const scheduleDaysValue = availability?.operatingDays ?? resource.operatingDays;
   const scheduleOpensAt = availability?.opensAt ?? resource.opensAt;
@@ -89,9 +72,7 @@ export function ResourceDetail({
     availability && selectedSlot ? (
       <BookingRequestForm
         key={`${availability.date}:${selectedSlot.startTime}:${selectedSlot.endTime}`}
-        user={user}
         resourceName={resource.name}
-        requiresApproval={requiresApproval}
         isSlotAvailable={isSlotAvailable}
         chooseAnotherHref={`/resources/${resource.id}?date=${encodeURIComponent(
           availability.date,
@@ -110,22 +91,11 @@ export function ResourceDetail({
       <header className={styles.header}>
         <BrandMark />
         <nav className={styles.headerNav} aria-label="Resource navigation">
-          <Link href="/dashboard">Dashboard</Link>
-          <Link href="/resources" aria-current="page">
-            Resources
+          <Link href="/" aria-current="page">
+            Rooms
           </Link>
-          {user.role === "student" && <Link href="/bookings">My bookings</Link>}
+          <Link href="/bookings">My bookings</Link>
         </nav>
-        <div className={styles.identity}>
-          <span>
-            <strong>{user.fullName}</strong>
-            <small>{user.role}</small>
-          </span>
-          <LogoutButton
-            className={styles.logout}
-            errorClassName={styles.logoutError}
-          />
-        </div>
       </header>
 
       <div className={styles.shell}>
@@ -136,7 +106,7 @@ export function ResourceDetail({
         <section className={styles.resourceHero} aria-labelledby="resource-title">
           <div className={styles.heroIdentity}>
             <span className={styles.resourceIcon} data-type={resource.type}>
-              <ResourceTypeIcon type={resource.type} />
+              <RoomIcon />
             </span>
             <div>
               <p>
@@ -190,8 +160,6 @@ export function ResourceDetail({
             <button type="submit">Check date</button>
           </form>
 
-          {liveRegion}
-
           {!availability ? null : availability.blockedReason ? (
             <div className={styles.blockedState} role="status">
               <strong>No operational availability</strong>
@@ -205,7 +173,7 @@ export function ResourceDetail({
               <strong>No bookable hourly slots remain</strong>
               <span>
                 Every operational slot on this date has elapsed or is occupied
-                by a pending, confirmed, or checked-in booking. Choose another date.
+                by a confirmed booking. Choose another date.
               </span>
             </div>
           ) : null}
@@ -218,7 +186,7 @@ export function ResourceDetail({
                 </strong>
                 <span>{availability.date} · ICT (UTC+7)</span>
                 <small>
-                  Pending, confirmed, and checked-in bookings are excluded. Availability is
+                  Confirmed bookings are excluded. Availability is
                   checked again when a booking request is sent.
                 </small>
               </div>
@@ -294,7 +262,7 @@ export function ResourceDetail({
 
             <section className={styles.amenityPanel} aria-labelledby="amenities-title">
               <div className={styles.sectionHeading}>
-                <p>Room setup and equipment</p>
+                <p>Room setup and facilities</p>
                 <h2 id="amenities-title">Amenities</h2>
               </div>
               {resource.amenities.length ? (
@@ -305,8 +273,8 @@ export function ResourceDetail({
                 </ul>
               ) : (
                 <p className={styles.emptyAmenities}>
-                  No additional amenities are listed. Check the resource details
-                  with campus staff if you need specific equipment.
+                  No additional amenities are listed. Check the room details with
+                  campus staff if you need a specific setup.
                 </p>
               )}
             </section>

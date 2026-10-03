@@ -1,7 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { User } from "@/features/auth/types";
 import {
   BookingRequestError,
   createBookingRequest,
@@ -25,13 +24,6 @@ vi.mock("../api/browser", () => ({
 }));
 
 const mockedCreate = vi.mocked(createBookingRequest);
-const student: User = {
-  id: "30000000-0000-4000-8000-000000000001",
-  email: "student@usth.edu.vn",
-  fullName: "Campus Student",
-  role: "student",
-  createdAt: "2026-01-01T00:00:00.000Z",
-};
 const input = {
   resourceId: "20000000-0000-4000-8000-000000000001",
   date: "2099-01-05",
@@ -39,14 +31,9 @@ const input = {
   endTime: "10:00",
 };
 
-function renderForm(user: User = student, requiresApproval = false) {
+function renderForm() {
   return render(
-    <BookingRequestForm
-      user={user}
-      resourceName="Study Room A101"
-      requiresApproval={requiresApproval}
-      input={input}
-    />,
+    <BookingRequestForm resourceName="Study Room A101" input={input} />,
   );
 }
 
@@ -73,12 +60,11 @@ describe("BookingRequestForm", () => {
     await userEvent.dblClick(button);
 
     expect(mockedCreate).toHaveBeenCalledTimes(1);
-    expect(mockedCreate).toHaveBeenCalledWith(input, student.id);
+    expect(mockedCreate).toHaveBeenCalledWith(input);
     expect(screen.getByRole("button", { name: "Sending request…" })).toBeDisabled();
 
     resolveBooking({
       id: "40000000-0000-4000-8000-000000000001",
-      requesterId: student.id,
       ...input,
       timeZone: "Asia/Ho_Chi_Minh",
       status: "confirmed",
@@ -96,80 +82,26 @@ describe("BookingRequestForm", () => {
     expect(refresh).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ["confirmed", false, "Booking confirmed."],
-    ["pending", true, "Request sent — pending staff approval."],
-  ] as const)(
-    "announces the backend-returned %s status",
-    async (status, requiresApproval, message) => {
-      mockedCreate.mockResolvedValue({
-        id: "40000000-0000-4000-8000-000000000001",
-        requesterId: student.id,
-        ...input,
-        timeZone: "Asia/Ho_Chi_Minh",
-        status,
-        createdAt: "2026-09-15T00:00:00.000Z",
-      });
-      renderForm(student, requiresApproval);
-
-      await userEvent.click(
-        screen.getByRole("button", { name: "Send booking request" }),
-      );
-
-      expect(await screen.findByText(message)).toBeVisible();
-      expect(
-        screen.getByText(status === "pending" ? "Staff approval" : "Confirmed"),
-      ).toBeVisible();
-      await waitFor(() =>
-        expect(screen.getByText(message).parentElement).toHaveFocus(),
-      );
-      expect(
-        screen.queryByRole("button", { name: "Send booking request" }),
-      ).not.toBeInTheDocument();
-    },
-  );
-
-  it("replaces a stale approval preview with the authoritative result", async () => {
+  it("announces the confirmed booking and replaces the pre-submit badge", async () => {
     mockedCreate.mockResolvedValue({
       id: "40000000-0000-4000-8000-000000000001",
-      requesterId: student.id,
       ...input,
       timeZone: "Asia/Ho_Chi_Minh",
-      status: "pending",
+      status: "confirmed",
       createdAt: "2026-09-15T00:00:00.000Z",
     });
-    renderForm(student, false);
+    renderForm();
     expect(screen.getByText("Immediate confirmation")).toBeVisible();
 
     await userEvent.click(
       screen.getByRole("button", { name: "Send booking request" }),
     );
 
-    expect(
-      await screen.findByText("Request sent — pending staff approval."),
-    ).toBeVisible();
-    expect(screen.getByText("Staff approval")).toBeVisible();
+    expect(await screen.findByText("Booking confirmed.")).toBeVisible();
+    expect(screen.getByText("Confirmed")).toBeVisible();
     expect(screen.queryByText("Immediate confirmation")).not.toBeInTheDocument();
-  });
-
-  it("offers safe sign-in recovery when the session expires", async () => {
-    mockedCreate.mockRejectedValue(
-      new BookingRequestError(
-        "session",
-        "Your session has ended. Sign in again before sending this request.",
-      ),
-    );
-    renderForm();
-
-    await userEvent.click(
-      screen.getByRole("button", { name: "Send booking request" }),
-    );
-
-    const alert = await screen.findByRole("alert");
-    await waitFor(() => expect(alert).toHaveFocus());
-    expect(screen.getByRole("link", { name: "Sign in again" })).toHaveAttribute(
-      "href",
-      "/login?next=%2Fresources%2F20000000-0000-4000-8000-000000000001%3Fdate%3D2099-01-05%26startTime%3D09%253A00%26endTime%3D10%253A00",
+    await waitFor(() =>
+      expect(screen.getByText("Booking confirmed.").parentElement).toHaveFocus(),
     );
     expect(
       screen.queryByRole("button", { name: "Send booking request" }),
@@ -202,23 +134,10 @@ describe("BookingRequestForm", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("keeps staff and admin accounts read-only", () => {
-    renderForm({ ...student, role: "staff" });
-
-    expect(
-      screen.getByText("Booking requests are available to student accounts."),
-    ).toBeVisible();
-    expect(
-      screen.queryByRole("button", { name: "Send booking request" }),
-    ).not.toBeInTheDocument();
-  });
-
   it("explains an unavailable selection without offering submission", () => {
     render(
       <BookingRequestForm
-        user={student}
         resourceName="Study Room A101"
-        requiresApproval={false}
         isSlotAvailable={false}
         chooseAnotherHref="/resources/20000000-0000-4000-8000-000000000001?date=2099-01-05"
         input={input}

@@ -1,15 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ResourceDetailPage from "./page";
-import { getCurrentUser } from "@/features/auth/api/server";
 import {
   getResourceAvailability,
   getResourceDetail,
 } from "@/features/resources/api/server";
-import { SessionExpiredError } from "@/lib/api/session";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import type { Resource, ResourceAvailability } from "@/features/resources/types";
 
-vi.mock("@/features/auth/api/server", () => ({ getCurrentUser: vi.fn() }));
 vi.mock("@/features/resources/api/server", () => ({
   getResourceAvailability: vi.fn(),
   getResourceDetail: vi.fn(),
@@ -17,9 +14,6 @@ vi.mock("@/features/resources/api/server", () => ({
 vi.mock("next/navigation", () => ({
   notFound: vi.fn(() => {
     throw new Error("notFound");
-  }),
-  redirect: vi.fn((path: string) => {
-    throw new Error(`redirect:${path}`);
   }),
 }));
 
@@ -45,13 +39,6 @@ const resource: Resource = {
   },
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
-};
-const student = {
-  id: "30000000-0000-4000-8000-000000000001",
-  email: "student@usth.edu.vn",
-  fullName: "Availability Student",
-  role: "student" as const,
-  createdAt: "2026-01-01T00:00:00.000Z",
 };
 const availability: ResourceAvailability = {
   resourceId: resource.id,
@@ -80,34 +67,30 @@ function page(searchParams: Record<string, string | string[] | undefined> = {}) 
 
 describe("ResourceDetailPage", () => {
   beforeEach(() => {
-    vi.mocked(getCurrentUser).mockReset();
     vi.mocked(getResourceDetail).mockReset();
     vi.mocked(getResourceAvailability).mockReset();
     vi.mocked(notFound).mockClear();
-    vi.mocked(redirect).mockClear();
   });
 
-  it("rejects malformed resource identifiers before authentication", async () => {
+  it("rejects malformed resource identifiers before any data lookup", async () => {
     await expect(
       ResourceDetailPage({
         params: Promise.resolve({ id: "not-a-uuid" }),
         searchParams: Promise.resolve({}),
       }),
     ).rejects.toThrow("notFound");
-    expect(getCurrentUser).not.toHaveBeenCalled();
-  });
-
-  it("redirects anonymous visitors to the requested internal detail route", async () => {
-    vi.mocked(getCurrentUser).mockResolvedValue(null);
-
-    await expect(page()).rejects.toThrow(
-      `redirect:/login?next=${encodeURIComponent(`/resources/${resource.id}`)}`,
-    );
     expect(getResourceDetail).not.toHaveBeenCalled();
   });
 
+  it("returns not found when the resource lookup has no result", async () => {
+    vi.mocked(getResourceDetail).mockResolvedValue(null);
+
+    await expect(page()).rejects.toThrow("notFound");
+    expect(getResourceDetail).toHaveBeenCalledWith(resource.id);
+    expect(getResourceAvailability).not.toHaveBeenCalled();
+  });
+
   it("loads authoritative availability for a real requested date", async () => {
-    vi.mocked(getCurrentUser).mockResolvedValue(student);
     vi.mocked(getResourceDetail).mockResolvedValue(resource);
     vi.mocked(getResourceAvailability).mockResolvedValue(availability);
 
@@ -119,7 +102,6 @@ describe("ResourceDetailPage", () => {
       availability.date,
     );
     expect(result.props).toMatchObject({
-      user: student,
       resource,
       availability,
       checkedDate: availability.date,
@@ -128,7 +110,6 @@ describe("ResourceDetailPage", () => {
   });
 
   it("accepts only a contiguous available multi-hour selection", async () => {
-    vi.mocked(getCurrentUser).mockResolvedValue(student);
     vi.mocked(getResourceDetail).mockResolvedValue(resource);
     vi.mocked(getResourceAvailability).mockResolvedValue(availability);
 
@@ -157,7 +138,6 @@ describe("ResourceDetailPage", () => {
   });
 
   it("keeps a complete range that was just booked so the page can explain it", async () => {
-    vi.mocked(getCurrentUser).mockResolvedValue(student);
     vi.mocked(getResourceDetail).mockResolvedValue(resource);
     vi.mocked(getResourceAvailability).mockResolvedValue({
       ...availability,
@@ -178,7 +158,6 @@ describe("ResourceDetailPage", () => {
   });
 
   it("treats a start time without an end time as a single available slot", async () => {
-    vi.mocked(getCurrentUser).mockResolvedValue(student);
     vi.mocked(getResourceDetail).mockResolvedValue(resource);
     vi.mocked(getResourceAvailability).mockResolvedValue(availability);
 
@@ -201,7 +180,6 @@ describe("ResourceDetailPage", () => {
     { startTime: "10:30", endTime: "11:00" },
     { endTime: "11:00" },
   ])("selects nothing for an incomplete or invalid range %o", async (range) => {
-    vi.mocked(getCurrentUser).mockResolvedValue(student);
     vi.mocked(getResourceDetail).mockResolvedValue(resource);
     vi.mocked(getResourceAvailability).mockResolvedValue(availability);
 
@@ -211,16 +189,12 @@ describe("ResourceDetailPage", () => {
     expect(result.props.isSlotAvailable).toBe(false);
   });
 
-  it("returns an expired session to sign in for the same date and interval", async () => {
-    vi.mocked(getCurrentUser).mockResolvedValue(student);
-    vi.mocked(getResourceDetail).mockRejectedValue(new SessionExpiredError());
+  it("returns not found when a requested date has no authoritative availability", async () => {
+    vi.mocked(getResourceDetail).mockResolvedValue(resource);
+    vi.mocked(getResourceAvailability).mockResolvedValue(null);
 
     await expect(
       page({ date: availability.date, startTime: "09:00", endTime: "11:00" }),
-    ).rejects.toThrow(
-      `redirect:/login?next=${encodeURIComponent(
-        `/resources/${resource.id}?date=${availability.date}&startTime=09%3A00&endTime=11%3A00`,
-      )}`,
-    );
+    ).rejects.toThrow("notFound");
   });
 });

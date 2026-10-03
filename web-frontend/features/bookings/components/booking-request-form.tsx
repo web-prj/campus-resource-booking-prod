@@ -3,16 +3,13 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { User } from "@/features/auth/types";
 import { createBookingRequest, BookingRequestError } from "../api/browser";
 import type { BookingRequestInput, BookingRequestResult } from "../types";
 
 import styles from "./booking-request-form.module.css";
 
 interface BookingRequestFormProps {
-  user: User;
   resourceName: string;
-  requiresApproval: boolean;
   isSlotAvailable?: boolean;
   /** Where to send the student to pick a different interval. */
   chooseAnotherHref?: string;
@@ -30,9 +27,7 @@ function displayDate(date: string): string {
 }
 
 export function BookingRequestForm({
-  user,
   resourceName,
-  requiresApproval,
   isSlotAvailable = true,
   chooseAnotherHref,
   input,
@@ -48,14 +43,6 @@ export function BookingRequestForm({
     null,
   );
 
-  if (user.role !== "student") {
-    return (
-      <p className={styles.roleNotice}>
-        Booking requests are available to student accounts.
-      </p>
-    );
-  }
-
   async function submit() {
     if (lockRef.current || result) return;
     lockRef.current = true;
@@ -63,7 +50,7 @@ export function BookingRequestForm({
     setError("");
     setErrorCode(null);
     try {
-      const created = await createBookingRequest(input, user.id);
+      const created = await createBookingRequest(input);
       setResult(created);
       requestAnimationFrame(() => resultRef.current?.focus());
     } catch (caught) {
@@ -82,12 +69,6 @@ export function BookingRequestForm({
     }
   }
 
-  const bookingHref = `/resources/${input.resourceId}?date=${encodeURIComponent(
-    input.date,
-  )}&startTime=${encodeURIComponent(input.startTime)}&endTime=${encodeURIComponent(
-    input.endTime,
-  )}`;
-  const signInHref = `/login?next=${encodeURIComponent(bookingHref)}`;
   const anotherSlotHref =
     chooseAnotherHref ??
     `/resources/${input.resourceId}?date=${encodeURIComponent(input.date)}`;
@@ -107,15 +88,7 @@ export function BookingRequestForm({
           </h3>
         </div>
         {!isUnavailable && (
-          <span>
-            {result
-              ? result.status === "pending"
-                ? "Staff approval"
-                : "Confirmed"
-              : requiresApproval
-                ? "Staff approval"
-                : "Immediate confirmation"}
-          </span>
+          <span>{result ? "Confirmed" : "Immediate confirmation"}</span>
         )}
       </div>
 
@@ -143,11 +116,7 @@ export function BookingRequestForm({
           aria-live="polite"
           tabIndex={-1}
         >
-          <strong>
-            {result.status === "pending"
-              ? "Request sent — pending staff approval."
-              : "Booking confirmed."}
-          </strong>
+          <strong>Booking confirmed.</strong>
           <span>
             {resourceName} · {displayDate(result.date)} · {result.startTime}–{result.endTime} ICT
           </span>
@@ -159,10 +128,6 @@ export function BookingRequestForm({
         <button type="button" onClick={() => router.refresh()}>
           Refresh availability
         </button>
-      ) : errorCode === "session" ? (
-        <Link className={styles.sessionLink} href={signInHref}>
-          Sign in again
-        </Link>
       ) : isUnavailable ? (
         <div className={styles.unavailable} role="status">
           <p>

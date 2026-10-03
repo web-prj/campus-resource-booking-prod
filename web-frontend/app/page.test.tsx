@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import ResourcesPage from "./page";
+import HomePage from "./page";
 import { getResourceDirectory } from "@/features/resources/api/server";
 import { redirect } from "next/navigation";
 
@@ -34,20 +34,19 @@ function directory(page = 1, totalPages = 1) {
   };
 }
 
-describe("ResourcesPage", () => {
+describe("HomePage", () => {
   beforeEach(() => {
     vi.mocked(getResourceDirectory).mockReset();
     vi.mocked(redirect).mockClear();
   });
 
-  it("normalizes filters and passes authoritative discovery data to the directory", async () => {
+  it("opens directly on the room directory without any authentication guard", async () => {
     vi.mocked(getResourceDirectory).mockResolvedValue(directory());
 
-    const page = await ResourcesPage({
+    const page = await HomePage({
       searchParams: Promise.resolve({
         q: "  study room  ",
         amenity: " HDMI-Cable ",
-        page: "1",
         unknown: "ignored",
       }),
     });
@@ -55,7 +54,6 @@ describe("ResourcesPage", () => {
     const filters = {
       q: "study room",
       amenity: "hdmi-cable",
-      page: 1,
     };
     expect(getResourceDirectory).toHaveBeenCalledWith(filters);
     expect(page.props).toEqual({ filters, ...directory() });
@@ -65,7 +63,7 @@ describe("ResourcesPage", () => {
     vi.mocked(getResourceDirectory).mockResolvedValue(directory(99, 2));
 
     await expect(
-      ResourcesPage({
+      HomePage({
         searchParams: Promise.resolve({
           q: "study room",
           sort: "capacity_desc",

@@ -50,9 +50,6 @@ export class ResourceAvailabilityResponseDto {
   @ApiProperty({ nullable: true, example: 'Campus maintenance' })
   closureReason: string | null;
 
-  @ApiProperty({ example: false })
-  requiresApproval: boolean;
-
   @ApiProperty({ type: AvailabilitySlotResponseDto, isArray: true })
   slots: AvailabilitySlotResponseDto[];
 
@@ -93,7 +90,6 @@ export class ResourceAvailabilityResponseDto {
         blockedReason === AvailabilityBlockedReason.CLOSURE
           ? (closure?.reason ?? null)
           : null,
-      requiresApproval: resource.requiresApproval,
       slots:
         blockedReason === null
           ? hourlySlots(windowOpensAt, windowClosesAt).filter(
