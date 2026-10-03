@@ -1,16 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CAMPUS_CLOCK } from '../common/time/campus-clock';
+import { Resource } from '../resources/entities/resource.entity';
 import { BookingsController } from './bookings.controller';
 import { BookingsService } from './bookings.service';
 import { Booking } from './entities/booking.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Booking])],
+  imports: [TypeOrmModule.forFeature([Booking, Resource])],
   controllers: [BookingsController],
-  providers: [
-    BookingsService,
-    { provide: CAMPUS_CLOCK, useValue: () => new Date() },
-  ],
+  providers: [BookingsService],
 })
 export class BookingsModule {}
