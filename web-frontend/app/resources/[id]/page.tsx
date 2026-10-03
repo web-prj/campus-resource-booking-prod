@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getRoom } from "@/lib/api";
 import type { Room } from "@/lib/types";
@@ -22,24 +23,45 @@ export default async function ResourcePage({
 
   return (
     <div>
-      <h1>{room.name}</h1>
-      <p className="room-code">
-        {room.code} <span className="tag">{room.type}</span>
-      </p>
+      <Link href="/" className="back-link">
+        &larr; All spaces
+      </Link>
 
-      <ul className="detail-meta">
-        <li>Building: {room.building.name}</li>
-        <li>Location: {room.location}</li>
-        <li>Capacity: {room.capacity}</li>
-        {room.amenities.length > 0 && (
-          <li>Amenities: {room.amenities.join(", ")}</li>
-        )}
-      </ul>
+      <div className="detail-layout">
+        <div className="detail-main">
+          <p className="eyebrow">{room.building.name}</p>
+          <h1>{room.name}</h1>
+          <div className="detail-badges">
+            <span className="code-plaque">{room.code}</span>
+            <span className={`type type-${room.type}`}>{room.type}</span>
+          </div>
 
-      {room.description && <p>{room.description}</p>}
+          {room.description && <p className="detail-lead">{room.description}</p>}
 
-      <h2>Book this room</h2>
-      <BookingForm resourceId={room.id} />
+          <dl className="detail-facts">
+            <div>
+              <dt>Location</dt>
+              <dd>{room.location}</dd>
+            </div>
+            <div>
+              <dt>Capacity</dt>
+              <dd>{room.capacity} seats</dd>
+            </div>
+            {room.amenities.length > 0 && (
+              <div>
+                <dt>Amenities</dt>
+                <dd>{room.amenities.join(", ")}</dd>
+              </div>
+            )}
+          </dl>
+        </div>
+
+        <aside className="booking-panel" aria-label="Book this space">
+          <h2>Book this space</h2>
+          <p className="panel-note">Pick a date and a time range.</p>
+          <BookingForm resourceId={room.id} />
+        </aside>
+      </div>
     </div>
   );
 }

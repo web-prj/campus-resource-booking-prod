@@ -8,9 +8,8 @@ import {
 } from 'typeorm';
 
 /**
- * A student. Authentication was removed for this assignment, so the app runs
- * as a single seeded student (see users.constants.ts). The table is kept only
- * so bookings can reference an owner.
+ * A student account. Students can sign up and log in (see the auth module),
+ * and each booking belongs to the user who made it.
  */
 @Entity('users')
 export class User {
@@ -23,6 +22,18 @@ export class User {
 
   @Column({ name: 'full_name', type: 'varchar', length: 120 })
   fullName: string;
+
+  // The hashed password (never the plain text). `select: false` keeps it out
+  // of normal queries; only the login check asks for it explicitly.
+  // It is null for the seeded student, who has no password.
+  @Column({
+    name: 'password_hash',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    select: false,
+  })
+  passwordHash: string | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

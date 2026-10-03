@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import {
   ApiCreatedResponse,
@@ -14,24 +15,23 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { DEFAULT_STUDENT_ID } from '../users/users.constants';
 import { BookingsService } from './bookings.service';
 import { BookingResponseDto } from './dto/booking-response.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { UserIdDto } from './dto/user-id.dto';
 
+// Every request says which user it is for with a userId (no login tokens),
+// and a user only ever sees or changes their own bookings.
 @ApiTags('bookings')
 @Controller('bookings')
 export class BookingsController {
-  // Auth was removed, so every booking belongs to the one seeded student.
-  private readonly requesterId = DEFAULT_STUDENT_ID;
-
   constructor(private readonly bookingsService: BookingsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List my bookings' })
+  @ApiOperation({ summary: 'List my bookings (GET /bookings?userId=...)' })
   @ApiOkResponse({ type: BookingResponseDto, isArray: true })
-  async findAll(): Promise<BookingResponseDto[]> {
-    const bookings = await this.bookingsService.findAll(this.requesterId);
+  async findAll(@Query() { userId }: UserIdDto): Promise<BookingResponseDto[]> {
+    const bookings = await this.bookingsService.findAll(userId);
     return bookings.map(BookingResponseDto.fromEntity);
   }
 
@@ -40,8 +40,9 @@ export class BookingsController {
   @ApiOkResponse({ type: BookingResponseDto })
   async findOne(
     @Param('id', ParseUUIDPipe) id: string,
+    @Query() { userId }: UserIdDto,
   ): Promise<BookingResponseDto> {
-    const booking = await this.bookingsService.findOne(this.requesterId, id);
+    const booking = await this.bookingsService.findOne(userId, id);
     if (!booking) throw new NotFoundException('Booking not found');
     return BookingResponseDto.fromEntity(booking);
   }
@@ -50,17 +51,18 @@ export class BookingsController {
   @ApiOperation({ summary: 'Book a room' })
   @ApiCreatedResponse({ type: BookingResponseDto })
   async create(@Body() dto: CreateBookingDto): Promise<BookingResponseDto> {
-    const booking = await this.bookingsService.create(this.requesterId, dto);
+    const booking = await this.bookingsService.create(dto.userId, dto);
     return BookingResponseDto.fromEntity(booking);
   }
 
   @Patch(':id/cancel')
-  @ApiOperation({ summary: 'Cancel a booking' })
+  @ApiOperation({ summary: 'Cancel one of my bookings' })
   @ApiOkResponse({ type: BookingResponseDto })
   async cancel(
     @Param('id', ParseUUIDPipe) id: string,
+    @Body() { userId }: UserIdDto,
   ): Promise<BookingResponseDto> {
-    const booking = await this.bookingsService.cancel(this.requesterId, id);
+    const booking = await this.bookingsService.cancel(userId, id);
     return BookingResponseDto.fromEntity(booking);
   }
 }

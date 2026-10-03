@@ -17,6 +17,13 @@ export type Room = {
   };
 };
 
+// A student account, as returned by sign up and log in (never a password).
+export type User = {
+  id: string;
+  email: string;
+  fullName: string;
+};
+
 // A booking that the student made for a room.
 export type Booking = {
   id: string;

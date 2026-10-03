@@ -1,11 +1,18 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { cancelBooking } from "@/lib/api";
+import type { Booking } from "@/lib/types";
 
-export default function CancelButton({ id }: { id: string }) {
-  const router = useRouter();
+export default function CancelButton({
+  id,
+  userId,
+  onCancelled,
+}: {
+  id: string;
+  userId: string;
+  onCancelled: (booking: Booking) => void;
+}) {
   const [cancelling, setCancelling] = useState(false);
 
   async function handleCancel() {
@@ -19,9 +26,9 @@ export default function CancelButton({ id }: { id: string }) {
 
     setCancelling(true);
     try {
-      await cancelBooking(id);
-      // Refresh the page so the booking shows as cancelled.
-      router.refresh();
+      const updated = await cancelBooking(id, userId);
+      // Tell the list so the booking shows as cancelled.
+      onCancelled(updated);
     } catch {
       window.alert("Sorry, the booking could not be cancelled.");
       setCancelling(false);

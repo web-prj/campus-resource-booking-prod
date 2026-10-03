@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Resource } from '../resources/entities/resource.entity';
+import { User } from '../users/entities/user.entity';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { Booking } from './entities/booking.entity';
 import { BookingStatus } from './enums/booking-status.enum';
@@ -17,12 +18,20 @@ export class BookingsService {
     private readonly bookings: Repository<Booking>,
     @InjectRepository(Resource)
     private readonly resources: Repository<Resource>,
+    @InjectRepository(User)
+    private readonly users: Repository<User>,
   ) {}
 
   /** Create a new confirmed booking for the student. */
   async create(requesterId: string, dto: CreateBookingDto): Promise<Booking> {
     if (dto.startTime >= dto.endTime) {
       throw new BadRequestException('Start time must be before end time');
+    }
+
+    // Make sure the user really exists (e.g. it was not deleted).
+    const userExists = await this.users.existsBy({ id: requesterId });
+    if (!userExists) {
+      throw new NotFoundException('User not found. Please log in again.');
     }
 
     const room = await this.resources.findOneBy({ id: dto.resourceId });

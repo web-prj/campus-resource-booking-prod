@@ -1,7 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsUUID, Matches } from 'class-validator';
+import { UserIdDto } from './user-id.dto';
 
-export class CreateBookingDto {
+// Includes userId (from UserIdDto) so we know who is booking.
+export class CreateBookingDto extends UserIdDto {
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
   resourceId: string;

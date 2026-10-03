@@ -1,13 +1,35 @@
-/* Simple, plain styling for the room booking app. */
+/* USTH Campus Room Booking — visual styles.
+   Brand foundation: USTH blue #2A3C95, USTH red #EC2227, white.
+   Red is kept for one job: the primary "book" action and error/cancelled
+   states, so it stays a signal rather than decoration. */
 
 :root {
   --usth-blue: #2a3c95;
+  --usth-blue-deep: #1b2560;
   --usth-red: #ec2227;
-  --text: #1a1a1a;
-  --muted: #595959;
-  --border: #d4d4d4;
-  --bg: #f7f7f9;
-  --card-bg: #ffffff;
+  --usth-red-deep: #c81d22;
+
+  --ink: #1a1d33;
+  --text: #2c3142;
+  --muted: #646a86;
+  --border: #e4e7f2;
+  --surface: #ffffff;
+  --tint: #eef1fb;
+  --tint-2: #f6f8fe;
+
+  --success: #1a7f37;
+  --success-bg: #e7f4ec;
+  --danger-bg: #fdecec;
+
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow: 0 1px 2px rgba(26, 29, 51, 0.05), 0 8px 24px rgba(26, 29, 51, 0.06);
+  --shadow-lift: 0 2px 6px rgba(26, 29, 51, 0.08),
+    0 18px 40px rgba(42, 60, 149, 0.14);
+
+  /* --font-inter and --font-space-grotesk come from next/font in layout.tsx. */
+  --font-body: var(--font-inter), system-ui, sans-serif;
+  --font-display: var(--font-space-grotesk), system-ui, sans-serif;
 }
 
 * {
@@ -16,171 +38,415 @@
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-body);
   color: var(--text);
-  background-color: var(--bg);
-  line-height: 1.5;
+  line-height: 1.6;
+  background-color: var(--tint-2);
+  background-image: radial-gradient(
+      900px 500px at 100% -5%,
+      rgba(42, 60, 149, 0.1),
+      transparent 60%
+    ),
+    radial-gradient(
+      700px 400px at -10% 0%,
+      rgba(42, 60, 149, 0.06),
+      transparent 55%
+    );
+  background-attachment: fixed;
 }
 
-/* Header and navigation */
-.site-header {
-  background-color: var(--usth-blue);
-  color: #ffffff;
-}
-
-.nav {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 1rem;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.site-title {
-  color: #ffffff;
-  font-size: 1.25rem;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.nav-links {
-  display: flex;
-  gap: 1.25rem;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.nav-links a {
-  color: #ffffff;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.nav-links a:hover {
-  text-decoration: underline;
-}
-
-/* Main content area */
-.main {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 1.5rem 1rem 3rem;
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  color: var(--ink);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
 }
 
 h1 {
-  color: var(--usth-blue);
-  font-size: 1.75rem;
-  margin-top: 0;
+  font-size: clamp(1.9rem, 1.4rem + 2vw, 2.5rem);
+  margin: 0 0 0.5rem;
 }
 
-h2 {
-  color: var(--usth-blue);
+p {
+  margin: 0 0 1rem;
 }
 
 a {
   color: var(--usth-blue);
 }
 
-/* Room grid and cards */
+/* ---------- Header ---------- */
+.site-header {
+  background: linear-gradient(90deg, var(--usth-blue-deep), var(--usth-blue));
+  border-bottom: 3px solid var(--usth-red);
+}
+
+.nav {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0.9rem 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+}
+
+.site-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+
+.site-mark {
+  width: 30px;
+  height: 30px;
+  flex: none;
+}
+
+.nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-links a {
+  display: inline-block;
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-sm);
+}
+
+.nav-links a:hover,
+.nav-button:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* "Sign up" gets a white outline so it reads as the account action. */
+.nav-links .nav-cta {
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+.nav-user {
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0.4rem 0.25rem 0.4rem 0.75rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.95rem;
+}
+
+.nav-button {
+  background: transparent;
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+/* ---------- Layout ---------- */
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 3.5rem;
+}
+
+.site-footer {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.site-footer p {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 1.1rem 1.25rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* ---------- Hero (home) ---------- */
+.hero {
+  background: linear-gradient(135deg, var(--usth-blue), var(--usth-blue-deep));
+  color: #ffffff;
+  border-radius: var(--radius);
+  padding: clamp(1.5rem, 1rem + 3vw, 2.75rem);
+  box-shadow: var(--shadow);
+  margin-bottom: 2.25rem;
+}
+
+.hero h1 {
+  color: #ffffff;
+  max-width: 18ch;
+}
+
+.hero-eyebrow {
+  display: inline-block;
+  margin: 0 0 0.9rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 2px solid var(--usth-red);
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.hero-lead {
+  max-width: 48ch;
+  margin: 0 0 1.25rem;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 1.05rem;
+}
+
+.hero-stats {
+  display: inline-block;
+  margin: 0;
+  padding: 0.4rem 0.85rem;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.section-title {
+  font-size: 1.15rem;
+  margin: 0 0 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ---------- Room grid & plaque cards ---------- */
 .room-grid {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1rem;
+  gap: 1.1rem;
 }
 
 .room-card {
-  display: block;
-  background-color: var(--card-bg);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 1rem;
+  border-radius: var(--radius);
+  padding: 1.25rem;
   text-decoration: none;
   color: var(--text);
-  height: 100%;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .room-card:hover {
-  border-color: var(--usth-blue);
+  transform: translateY(-3px);
+  border-color: rgba(42, 60, 149, 0.35);
+  box-shadow: var(--shadow-lift);
 }
 
-.room-card h2 {
-  margin: 0 0 0.25rem;
-  font-size: 1.1rem;
+.room-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
 }
 
-.room-code {
+.eyebrow {
   color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.room-meta {
-  margin: 0.5rem 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: 0.9rem;
-  color: var(--muted);
-}
-
-.room-meta li {
-  margin-bottom: 0.15rem;
-}
-
-/* A small coloured label, e.g. the resource type */
-.tag {
-  display: inline-block;
-  background-color: #e8eaf4;
-  color: var(--usth-blue);
-  border-radius: 4px;
-  padding: 0.1rem 0.5rem;
+  font-weight: 600;
   font-size: 0.8rem;
+}
+
+.room-name {
+  margin: 0 0 0.6rem;
+  font-size: 1.2rem;
+}
+
+/* Room code set like a wayfinding plaque. */
+.code-plaque {
+  display: inline-block;
+  align-self: flex-start;
+  background: var(--tint);
+  border: 1px solid rgba(42, 60, 149, 0.22);
+  color: var(--usth-blue);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 8px;
+}
+
+/* Resource type pill. */
+.type {
+  flex: none;
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--tint);
+  color: var(--usth-blue);
+  font-size: 0.72rem;
   font-weight: 600;
   text-transform: capitalize;
 }
 
-/* Amenities list */
+.room-meta {
+  margin: 0.9rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.meta-value {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
 .amenities {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  margin: 0.5rem 0 0;
+  margin: 0.8rem 0 0;
   padding: 0;
   list-style: none;
 }
 
 .amenities li {
-  background-color: #f0f0f3;
-  border-radius: 4px;
-  padding: 0.1rem 0.5rem;
-  font-size: 0.8rem;
-}
-
-/* Detail page */
-.detail-meta {
-  margin: 0 0 1.5rem;
-  padding: 0;
-  list-style: none;
-}
-
-.detail-meta li {
-  margin-bottom: 0.35rem;
-}
-
-/* Forms */
-.form {
-  background-color: var(--card-bg);
+  background: var(--tint-2);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 1.25rem;
-  max-width: 420px;
+  border-radius: 7px;
+  padding: 0.12rem 0.55rem;
+  font-size: 0.78rem;
+  color: var(--text);
 }
 
+.room-cta {
+  margin-top: auto;
+  padding-top: 1rem;
+  color: var(--usth-blue);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.room-card:hover .room-cta {
+  color: var(--usth-red);
+}
+
+/* ---------- Detail page ---------- */
+.back-link {
+  display: inline-block;
+  margin-bottom: 1.25rem;
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.back-link:hover {
+  color: var(--usth-blue);
+}
+
+.detail-layout {
+  display: grid;
+  grid-template-columns: 1.3fr 0.9fr;
+  gap: 1.75rem;
+  align-items: start;
+}
+
+.detail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.25rem 0 1.25rem;
+}
+
+.detail-lead {
+  color: var(--text);
+  font-size: 1.05rem;
+  max-width: 60ch;
+}
+
+.detail-facts {
+  margin: 1.5rem 0 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+
+.detail-facts > div {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  gap: 1rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-facts dt {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.detail-facts dd {
+  margin: 0;
+  color: var(--ink);
+}
+
+/* The one elevated glass surface: the booking panel (the primary task). */
+.booking-panel {
+  position: sticky;
+  top: 1.5rem;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-lift);
+}
+
+.booking-panel h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.25rem;
+}
+
+.panel-note {
+  margin: 0 0 1.25rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* ---------- Forms ---------- */
 .form-field {
   display: flex;
   flex-direction: column;
@@ -188,61 +454,187 @@ a {
 }
 
 .form-field label {
+  margin-bottom: 0.4rem;
   font-weight: 600;
-  margin-bottom: 0.35rem;
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
+.time-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
 }
 
 input,
 select {
   font: inherit;
-  padding: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  color: var(--ink);
+  background: #ffffff;
   border: 1px solid var(--border);
-  border-radius: 4px;
-  background-color: #ffffff;
+  border-radius: var(--radius-sm);
 }
 
-/* Buttons */
-button {
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--usth-blue);
+  box-shadow: 0 0 0 3px rgba(42, 60, 149, 0.18);
+}
+
+/* ---------- Buttons ---------- */
+button,
+.button-primary {
   font: inherit;
+  font-family: var(--font-display);
   cursor: pointer;
   border: none;
-  border-radius: 4px;
-  padding: 0.55rem 1.1rem;
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 1.25rem;
   font-weight: 600;
 }
 
+/* Primary action = book / go. Solid USTH red so booking is the bold moment. */
 .button-primary {
-  background-color: var(--usth-blue);
+  display: inline-block;
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+  background: var(--usth-red);
   color: #ffffff;
+  transition: background 0.15s ease;
+}
+
+.button-primary:hover {
+  background: var(--usth-red-deep);
 }
 
 .button-primary:disabled {
-  background-color: var(--muted);
+  background: var(--muted);
   cursor: not-allowed;
 }
 
+/* Destructive action = quieter outlined red so it does not compete. */
 .button-danger {
-  background-color: var(--usth-red);
-  color: #ffffff;
-}
-
-/* Visible focus for keyboard users */
-a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-select:focus-visible {
-  outline: 3px solid var(--usth-red);
-  outline-offset: 2px;
-}
-
-/* Error message */
-.error {
+  background: #ffffff;
   color: var(--usth-red);
-  font-weight: 600;
-  margin: 0 0 1rem;
+  border: 1px solid rgba(236, 34, 39, 0.5);
+  padding: 0.45rem 0.9rem;
+  transition: background 0.15s ease;
 }
 
-/* Bookings list */
+.button-danger:hover {
+  background: var(--danger-bg);
+}
+
+.error {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--danger-bg);
+  border-radius: var(--radius-sm);
+  color: var(--usth-red-deep);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.field-hint {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* ---------- Log in / Sign up ---------- */
+.auth-page {
+  display: flex;
+  justify-content: center;
+  padding-top: 1rem;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--usth-blue);
+  border-radius: var(--radius);
+  padding: 1.75rem;
+  box-shadow: var(--shadow);
+}
+
+.auth-card h1 {
+  font-size: 1.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.form-switch {
+  margin: 1.25rem 0 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.form-switch a {
+  font-weight: 600;
+}
+
+/* ---------- Success pop-up (native dialog) ---------- */
+.confirm-dialog {
+  width: min(92vw, 420px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.75rem;
+  color: var(--text);
+  box-shadow: var(--shadow-lift);
+}
+
+.confirm-dialog::backdrop {
+  background: rgba(26, 29, 51, 0.45);
+}
+
+.confirm-dialog h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.3rem;
+}
+
+/* A small confirmed tick before the heading. */
+.confirm-dialog h2::before {
+  content: "✓";
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-right: 0.5rem;
+  vertical-align: -0.25rem;
+  background: var(--success-bg);
+  color: var(--success);
+  border-radius: 999px;
+  font-size: 0.95rem;
+}
+
+.confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+}
+
+.confirm-actions .button-primary {
+  width: auto;
+}
+
+.button-ghost {
+  background: transparent;
+  color: var(--usth-blue);
+  border: 1px solid var(--border);
+}
+
+.button-ghost:hover {
+  background: var(--tint);
+}
+
+/* ---------- Bookings as tickets ---------- */
 .booking-list {
   list-style: none;
   margin: 0;
@@ -251,50 +643,177 @@ select:focus-visible {
   gap: 1rem;
 }
 
-.booking-card {
-  background-color: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 1rem;
-}
-
-.booking-card h2 {
-  margin: 0 0 0.5rem;
-  font-size: 1.1rem;
-}
-
-.booking-card dl {
-  margin: 0 0 0.75rem;
+.ticket {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.2rem 0.75rem;
-  font-size: 0.95rem;
+  grid-template-columns: auto 1fr auto;
+  gap: 1.25rem;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--usth-blue);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.25rem;
+  box-shadow: var(--shadow);
 }
 
-.booking-card dt {
+.ticket-cancelled {
+  border-left-color: var(--usth-red);
+  opacity: 0.85;
+}
+
+.ticket-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.5rem;
+  padding-right: 1.25rem;
+  border-right: 1px solid var(--border);
+  font-family: var(--font-display);
+  line-height: 1.1;
+}
+
+.ticket-weekday {
   color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
-.booking-card dd {
+.ticket-day {
+  color: var(--ink);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.ticket-room {
+  margin: 0 0 0.2rem;
+  font-size: 1.15rem;
+}
+
+.ticket-where {
+  margin: 0 0 0.2rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.ticket-time {
   margin: 0;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.ticket-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
 }
 
 .status {
+  display: inline-block;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
   font-weight: 600;
   text-transform: capitalize;
 }
 
 .status-confirmed {
-  color: #1a7f37;
+  background: var(--success-bg);
+  color: var(--success);
 }
 
 .status-cancelled {
-  color: var(--usth-red);
+  background: var(--danger-bg);
+  color: var(--usth-red-deep);
 }
 
-/* Respect users who prefer less motion */
+/* ---------- Empty / not-found states ---------- */
+.empty,
+.empty-state {
+  color: var(--muted);
+}
+
+.empty-state {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.empty-state h1 {
+  margin-bottom: 0.5rem;
+}
+
+.empty-state .button-primary {
+  width: auto;
+  margin-top: 0.5rem;
+}
+
+/* ---------- Accessibility ---------- */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+.room-card:focus-visible {
+  outline: 3px solid var(--usth-red);
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
-    scroll-behavior: auto;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .room-card:hover {
+    transform: none;
+  }
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 760px) {
+  .detail-layout {
+    grid-template-columns: 1fr;
+  }
+  .booking-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 520px) {
+  .ticket {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  .ticket-date {
+    flex-direction: row;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0 0 0.75rem;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .ticket-side {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  /* Keep all the nav links on one row under the title. */
+  .nav-links {
+    gap: 0.15rem;
+    margin-left: -0.5rem;
+  }
+  .nav-links a,
+  .nav-button {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.9rem;
+  }
+  .nav-user {
+    max-width: 7rem;
+    padding-left: 0.5rem;
+    font-size: 0.9rem;
   }
 }
