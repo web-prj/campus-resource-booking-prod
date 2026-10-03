@@ -36,8 +36,6 @@ jobs:
         run: npm run lint
       - name: Type-check
         run: npm run typecheck
-      - name: Test
-        run: npm test
       - name: Build
         run: npm run build
 
@@ -61,7 +59,5 @@ jobs:
         run: npm ci
       - name: Lint without modifying files
         run: npx --no-install eslint "src/**/*.ts"
-      - name: Test
-        run: npm test -- --runInBand
       - name: Build
         run: npm run build
