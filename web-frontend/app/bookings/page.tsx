@@ -1,22 +1,45 @@
-import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/features/auth/api/server";
-import { getStudentBookings } from "@/features/bookings/api/server";
-import { StudentBookings } from "@/features/bookings/components/student-bookings";
-import { withSessionRedirect } from "@/lib/api/session";
+import { getBookings } from "@/lib/api";
+import CancelButton from "./cancel-button";
 
-export const metadata: Metadata = {
-  title: "My bookings",
-  description: "Review upcoming, pending, and previous campus bookings.",
-};
-
+// Show all of the student's bookings. This is a Server Component.
 export default async function BookingsPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/bookings");
-  if (user.role !== "student") redirect("/dashboard");
+  const bookings = await getBookings();
 
-  const timeline = await withSessionRedirect("/bookings", () =>
-    getStudentBookings(),
+  return (
+    <div>
+      <h1>My Bookings</h1>
+
+      {bookings.length === 0 ? (
+        <p>You have no bookings yet.</p>
+      ) : (
+        <ul className="booking-list">
+          {bookings.map((booking) => (
+            <li key={booking.id} className="booking-card">
+              <h2>{booking.resource.name}</h2>
+              <dl>
+                <dt>Building</dt>
+                <dd>{booking.resource.building.name}</dd>
+                <dt>Date</dt>
+                <dd>{booking.date}</dd>
+                <dt>Time</dt>
+                <dd>
+                  {booking.startTime}&ndash;{booking.endTime}
+                </dd>
+                <dt>Status</dt>
+                <dd>
+                  <span className={`status status-${booking.status}`}>
+                    {booking.status}
+                  </span>
+                </dd>
+              </dl>
+
+              {booking.status === "confirmed" && (
+                <CancelButton id={booking.id} />
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
-  return <StudentBookings user={user} timeline={timeline} />;
 }

@@ -1,119 +1,35 @@
 import {
-  BadRequestException,
   Controller,
   Get,
   NotFoundException,
   Param,
   ParseUUIDPipe,
-  Query,
-  UseInterceptors,
 } from '@nestjs/common';
-import { CacheInterceptor } from '@nestjs/cache-manager';
-import {
-  ApiBadRequestResponse,
-  ApiCookieAuth,
-  ApiNotFoundResponse,
-  ApiOkResponse,
-  ApiOperation,
-  ApiTags,
-  ApiUnauthorizedResponse,
-} from '@nestjs/swagger';
-import { DiscoverResourcesQueryDto } from './dto/discover-resources-query.dto';
-import { ResourceAvailabilityQueryDto } from './dto/resource-availability-query.dto';
-import { ResourceAvailabilityResponseDto } from './dto/resource-availability-response.dto';
-import { BuildingResponseDto } from './dto/building-response.dto';
-import { ResourcePageResponseDto } from './dto/resource-page-response.dto';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ResourceResponseDto } from './dto/resource-response.dto';
-import {
-  InvalidAvailabilityDateError,
-  InvalidAvailabilityRangeError,
-  ResourcesService,
-} from './resources.service';
+import { ResourcesService } from './resources.service';
 
 @ApiTags('resources')
-@ApiCookieAuth()
-@ApiUnauthorizedResponse({ description: 'Authentication required' })
 @Controller('resources')
 export class ResourcesController {
   constructor(private readonly resourcesService: ResourcesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Discover active campus resources' })
-  @ApiOkResponse({ type: ResourcePageResponseDto })
-  @ApiBadRequestResponse({ description: 'Invalid discovery filters' })
-  async discover(
-    @Query() query: DiscoverResourcesQueryDto,
-  ): Promise<ResourcePageResponseDto> {
-    try {
-      const [items, total] = await this.resourcesService.discover(query);
-      return ResourcePageResponseDto.fromEntities(
-        items,
-        total,
-        query.page,
-        query.pageSize,
-      );
-    } catch (error: unknown) {
-      this.translateAvailabilityError(error);
-    }
-  }
-
-  @Get('buildings')
-  @UseInterceptors(CacheInterceptor)
-  @ApiOperation({ summary: 'List buildings available for discovery filters' })
-  @ApiOkResponse({ type: BuildingResponseDto, isArray: true })
-  async findBuildings(): Promise<BuildingResponseDto[]> {
-    return (await this.resourcesService.findBuildings()).map(
-      BuildingResponseDto.fromEntity,
-    );
-  }
-
-  @Get(':id/availability')
-  @ApiOperation({ summary: 'List operationally available slots for a date' })
-  @ApiOkResponse({ type: ResourceAvailabilityResponseDto })
-  @ApiBadRequestResponse({ description: 'Invalid availability date' })
-  @ApiNotFoundResponse({ description: 'Resource not found' })
-  async findAvailability(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Query() query: ResourceAvailabilityQueryDto,
-  ): Promise<ResourceAvailabilityResponseDto> {
-    try {
-      const snapshot = await this.resourcesService.findAvailabilitySnapshot(
-        id,
-        query.date,
-      );
-      if (!snapshot) throw new NotFoundException('Resource not found');
-
-      return ResourceAvailabilityResponseDto.fromResource(
-        snapshot.resource,
-        query.date,
-        snapshot.closure,
-        snapshot.bookings,
-        this.resourcesService.currentTime(),
-      );
-    } catch (error: unknown) {
-      this.translateAvailabilityError(error);
-    }
+  @ApiOperation({ summary: 'List all rooms' })
+  @ApiOkResponse({ type: ResourceResponseDto, isArray: true })
+  async findAll(): Promise<ResourceResponseDto[]> {
+    const rooms = await this.resourcesService.findAll();
+    return rooms.map(ResourceResponseDto.fromEntity);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'View an active campus resource' })
+  @ApiOperation({ summary: 'Get one room' })
   @ApiOkResponse({ type: ResourceResponseDto })
-  @ApiNotFoundResponse({ description: 'Resource not found' })
   async findOne(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<ResourceResponseDto> {
-    const resource = await this.resourcesService.findDiscoverableById(id);
-    if (!resource) throw new NotFoundException('Resource not found');
-    return ResourceResponseDto.fromEntity(resource);
-  }
-
-  private translateAvailabilityError(error: unknown): never {
-    if (
-      error instanceof InvalidAvailabilityDateError ||
-      error instanceof InvalidAvailabilityRangeError
-    ) {
-      throw new BadRequestException(error.message);
-    }
-    throw error;
+    const room = await this.resourcesService.findOne(id);
+    if (!room) throw new NotFoundException('Room not found');
+    return ResourceResponseDto.fromEntity(room);
   }
 }

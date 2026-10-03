@@ -11,19 +11,12 @@
     "outDir": "./dist",
     "incremental": true,
     "skipLibCheck": true,
-    // Pinned explicitly because TypeScript 6 changed these defaults (strict
-    // on, no global @types, esModuleInterop on). Keeps editors on newer
-    // TypeScript in agreement with the project compiler.
-    "strict": false,
-    "types": ["node", "jest"],
+    "types": ["node"],
     "esModuleInterop": true,
     "strictNullChecks": true,
     "noImplicitAny": true,
     "strictBindCallApply": true,
     "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
-    "paths": {
-      "src/*": ["./src/*"]
-    }
+    "noFallthroughCasesInSwitch": true
   }
 }

@@ -4,13 +4,6 @@
 
 This repository contains **Campus Resource Booking**, a USTH web application for finding, reserving, approving, and managing university rooms, laboratories, and equipment.
 
-Primary roles:
-- **Student:** search, book, cancel, check in, and view booking history.
-- **Staff:** approve or reject requests, confirm check-in/check-out, and resolve operational issues.
-- **Admin:** manage users and resources and view utilization analytics.
-
-The project proposal is in `docs/Campus_Resource_Booking_Project_Proposal_EN.docx`. Read it before making product-scope or architecture decisions.
-
 ## Repository layout
 
 - `web-frontend/` — Next.js 16, React 19, TypeScript, App Router. Runs on port `18321`.

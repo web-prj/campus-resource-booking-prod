@@ -1,37 +1,36 @@
 import type { Metadata } from "next";
-import { Manrope, Space_Grotesk } from "next/font/google";
+import Link from "next/link";
 import "./globals.css";
 
-const displayFont = Space_Grotesk({
-  variable: "--font-display",
-  subsets: ["latin", "vietnamese"],
-  display: "swap",
-});
-
-const bodyFont = Manrope({
-  variable: "--font-body",
-  subsets: ["latin", "vietnamese"],
-  display: "swap",
-});
-
 export const metadata: Metadata = {
-  title: {
-    default: "Campus Resource Booking",
-    template: "%s | Campus Resource Booking",
-  },
-  description:
-    "Find and reserve USTH rooms, laboratories, and equipment without schedule conflicts.",
+  title: "Campus Room Booking",
+  description: "Book USTH campus rooms, labs, and equipment.",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en" data-scroll-behavior="smooth">
-      <body className={`${displayFont.variable} ${bodyFont.variable}`}>
-        {children}
+    <html lang="en">
+      <body>
+        <header className="site-header">
+          <nav className="nav" aria-label="Main">
+            <Link href="/" className="site-title">
+              Campus Room Booking
+            </Link>
+            <ul className="nav-links">
+              <li>
+                <Link href="/">Rooms</Link>
+              </li>
+              <li>
+                <Link href="/bookings">My Bookings</Link>
+              </li>
+            </ul>
+          </nav>
+        </header>
+        <main className="main">{children}</main>
       </body>
     </html>
   );

@@ -1,61 +1,45 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { Resource } from '../entities/resource.entity';
-import { ResourceStatus } from '../enums/resource-status.enum';
-import { ResourceType } from '../enums/resource-type.enum';
-import { BuildingResponseDto } from './building-response.dto';
 
+class BuildingDto {
+  @ApiProperty({ format: 'uuid' })
+  id: string;
+
+  @ApiProperty({ example: 'ALP' })
+  code: string;
+
+  @ApiProperty({ example: 'Alpha Building' })
+  name: string;
+}
+
+/** The shape of a room sent back to the frontend. */
 export class ResourceResponseDto {
   @ApiProperty({ format: 'uuid' })
   id: string;
 
-  @ApiProperty({ example: 'ROOM-A101' })
+  @ApiProperty({ example: 'ALP-101' })
   code: string;
 
-  @ApiProperty({ example: 'Study Room A101' })
+  @ApiProperty({ example: 'Room 101' })
   name: string;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiProperty({ nullable: true })
   description: string | null;
 
-  @ApiProperty({ enum: ResourceType })
-  type: ResourceType;
+  @ApiProperty({ example: 'room' })
+  type: string;
 
-  @ApiProperty({ enum: ResourceStatus })
-  status: ResourceStatus;
-
-  @ApiProperty({ example: 8 })
+  @ApiProperty({ example: 30 })
   capacity: number;
 
   @ApiProperty({ example: 'First floor' })
   location: string;
 
-  @ApiProperty({ type: [String] })
+  @ApiProperty({ type: [String], example: ['projector', 'whiteboard'] })
   amenities: string[];
 
-  @ApiProperty()
-  requiresApproval: boolean;
-
-  @ApiProperty({
-    type: [Number],
-    example: [1, 2, 3, 4, 5, 6],
-    description: 'Campus-local weekdays, where Sunday is 0',
-  })
-  operatingDays: number[];
-
-  @ApiProperty({ example: '08:00' })
-  opensAt: string;
-
-  @ApiProperty({ example: '18:00' })
-  closesAt: string;
-
-  @ApiProperty({ type: BuildingResponseDto })
-  building: BuildingResponseDto;
-
-  @ApiProperty()
-  createdAt: Date;
-
-  @ApiProperty()
-  updatedAt: Date;
+  @ApiProperty({ type: BuildingDto })
+  building: BuildingDto;
 
   static fromEntity(resource: Resource): ResourceResponseDto {
     return {
@@ -64,17 +48,14 @@ export class ResourceResponseDto {
       name: resource.name,
       description: resource.description,
       type: resource.type,
-      status: resource.status,
       capacity: resource.capacity,
       location: resource.location,
       amenities: resource.amenities,
-      requiresApproval: resource.requiresApproval,
-      operatingDays: resource.operatingDays,
-      opensAt: resource.opensAt.slice(0, 5),
-      closesAt: resource.closesAt.slice(0, 5),
-      building: BuildingResponseDto.fromEntity(resource.building),
-      createdAt: resource.createdAt,
-      updatedAt: resource.updatedAt,
+      building: {
+        id: resource.building.id,
+        code: resource.building.code,
+        name: resource.building.name,
+      },
     };
   }
 }

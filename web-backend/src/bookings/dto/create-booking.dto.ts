@@ -1,25 +1,20 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsUUID, Matches } from 'class-validator';
-import {
-  DATE_PATTERN,
-  HOUR_PATTERN,
-} from '../../resources/dto/resource-availability-query.dto';
+import { IsUUID, Matches } from 'class-validator';
 
 export class CreateBookingDto {
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
   resourceId: string;
 
-  @ApiProperty({ example: '2026-09-16', description: 'Campus-local date' })
-  @Matches(DATE_PATTERN)
-  @IsDateString({ strict: true })
+  @ApiProperty({ example: '2026-09-16', description: 'Date as YYYY-MM-DD' })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'date must be YYYY-MM-DD' })
   date: string;
 
-  @ApiProperty({ example: '09:00' })
-  @Matches(HOUR_PATTERN)
+  @ApiProperty({ example: '09:00', description: 'Start time as HH:MM' })
+  @Matches(/^\d{2}:\d{2}$/, { message: 'startTime must be HH:MM' })
   startTime: string;
 
-  @ApiProperty({ example: '10:00' })
-  @Matches(HOUR_PATTERN)
+  @ApiProperty({ example: '10:00', description: 'End time as HH:MM' })
+  @Matches(/^\d{2}:\d{2}$/, { message: 'endTime must be HH:MM' })
   endTime: string;
 }
