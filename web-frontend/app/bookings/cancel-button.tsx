@@ -29,8 +29,12 @@ export default function CancelButton({
       const updated = await cancelBooking(id, userId);
       // Tell the list so the booking shows as cancelled.
       onCancelled(updated);
-    } catch {
-      window.alert("Sorry, the booking could not be cancelled.");
+    } catch (err) {
+      window.alert(
+        err instanceof Error
+          ? err.message
+          : "Sorry, the booking could not be cancelled.",
+      );
       setCancelling(false);
     }
   }

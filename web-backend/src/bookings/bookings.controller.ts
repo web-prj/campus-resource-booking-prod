@@ -10,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
@@ -50,6 +51,7 @@ export class BookingsController {
   @Post()
   @ApiOperation({ summary: 'Book a room' })
   @ApiCreatedResponse({ type: BookingResponseDto })
+  @ApiConflictResponse({ description: 'The room is already booked then' })
   async create(@Body() dto: CreateBookingDto): Promise<BookingResponseDto> {
     const booking = await this.bookingsService.create(dto.userId, dto);
     return BookingResponseDto.fromEntity(booking);

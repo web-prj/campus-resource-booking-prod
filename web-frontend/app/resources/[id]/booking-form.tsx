@@ -25,6 +25,13 @@ const HOURS = [
   "21:00",
 ];
 
+// Today's date on campus as "YYYY-MM-DD", so past days cannot be picked.
+function todayOnCampus(): string {
+  return new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Ho_Chi_Minh",
+  });
+}
+
 export default function BookingForm({ resourceId }: { resourceId: string }) {
   const router = useRouter();
   const user = useCurrentUser();
@@ -113,6 +120,7 @@ export default function BookingForm({ resourceId }: { resourceId: string }) {
           id="date"
           type="date"
           required
+          min={todayOnCampus()}
           value={date}
           onChange={(event) => setDate(event.target.value)}
         />

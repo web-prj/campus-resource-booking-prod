@@ -1,23 +1,29 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { LessThan, MoreThan, Repository } from 'typeorm';
 import { Resource } from '../resources/entities/resource.entity';
 import { User } from '../users/entities/user.entity';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { Booking } from './entities/booking.entity';
 import { BookingStatus } from './enums/booking-status.enum';
 
+/** Today's date on campus as "YYYY-MM-DD" (the server itself may run in UTC). */
+function todayOnCampus(): string {
+  return new Date().toLocaleDateString('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+  });
+}
+
 @Injectable()
 export class BookingsService {
   constructor(
     @InjectRepository(Booking)
     private readonly bookings: Repository<Booking>,
-    @InjectRepository(Resource)
-    private readonly resources: Repository<Resource>,
     @InjectRepository(User)
     private readonly users: Repository<User>,
   ) {}
@@ -27,6 +33,10 @@ export class BookingsService {
     if (dto.startTime >= dto.endTime) {
       throw new BadRequestException('Start time must be before end time');
     }
+    // "YYYY-MM-DD" strings sort like dates, so we can compare them directly.
+    if (dto.date < todayOnCampus()) {
+      throw new BadRequestException('You cannot book a date in the past.');
+    }
 
     // Make sure the user really exists (e.g. it was not deleted).
     const userExists = await this.users.existsBy({ id: requesterId });
@@ -34,21 +44,43 @@ export class BookingsService {
       throw new NotFoundException('User not found. Please log in again.');
     }
 
-    const room = await this.resources.findOneBy({ id: dto.resourceId });
-    if (!room) throw new NotFoundException('Room not found');
+    // Check for clashes and save in one transaction, with the room row locked.
+    // If two students book the same room at the same moment, the second one
+    // waits here until the first is saved, so they cannot both get the slot.
+    const savedId = await this.bookings.manager.transaction(async (manager) => {
+      const room = await manager.findOne(Resource, {
+        where: { id: dto.resourceId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!room) throw new NotFoundException('Room not found');
 
-    const booking = this.bookings.create({
-      resourceId: room.id,
-      requesterId,
-      date: dto.date,
-      startTime: dto.startTime,
-      endTime: dto.endTime,
-      status: BookingStatus.CONFIRMED,
+      // Two bookings overlap when each one starts before the other ends.
+      const clash = await manager.existsBy(Booking, {
+        resourceId: room.id,
+        date: dto.date,
+        status: BookingStatus.CONFIRMED,
+        startTime: LessThan(dto.endTime),
+        endTime: MoreThan(dto.startTime),
+      });
+      if (clash) {
+        throw new ConflictException(
+          'This room is already booked at that time. Please pick another time.',
+        );
+      }
+
+      const booking = manager.create(Booking, {
+        resourceId: room.id,
+        requesterId,
+        date: dto.date,
+        startTime: dto.startTime,
+        endTime: dto.endTime,
+        status: BookingStatus.CONFIRMED,
+      });
+      return (await manager.save(booking)).id;
     });
-    const saved = await this.bookings.save(booking);
 
     // Reload so the response includes the room and building.
-    return (await this.findOne(requesterId, saved.id)) as Booking;
+    return (await this.findOne(requesterId, savedId)) as Booking;
   }
 
   /** All of the student's bookings, newest first. */

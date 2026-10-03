@@ -4,7 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { LogInDto } from './dto/log-in.dto';
 import { SignUpDto } from './dto/sign-up.dto';
@@ -29,7 +29,21 @@ export class AuthService {
       fullName: dto.fullName,
       passwordHash: await hashPassword(dto.password),
     });
-    return this.users.save(user);
+    try {
+      return await this.users.save(user);
+    } catch (error) {
+      // Two sign ups with the same email at the same moment can both pass the
+      // check above; the database's unique email rule (code 23505) stops one.
+      if (
+        error instanceof QueryFailedError &&
+        (error.driverError as { code?: string }).code === '23505'
+      ) {
+        throw new ConflictException(
+          'An account with this email already exists.',
+        );
+      }
+      throw error;
+    }
   }
 
   /** Check the email and password, and return the user if they match. */
